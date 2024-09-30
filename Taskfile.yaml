@@ -30,13 +30,13 @@ includes:
   repository: .taskfiles/Repository
   talos: .taskfiles/Talos
   sops: .taskfiles/Sops
+  rook: .taskfiles/Rook
   workstation: .taskfiles/Workstation
   user:
     taskfile: .taskfiles/User
     optional: true
 
 tasks:
-
   default: task --list
 
   init:
