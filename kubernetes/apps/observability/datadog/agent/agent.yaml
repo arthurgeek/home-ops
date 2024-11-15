@@ -1,0 +1,56 @@
+---
+apiVersion: datadoghq.com/v2alpha1
+kind: DatadogAgent
+metadata:
+  name: datadog
+spec:
+  global:
+    clusterName: home-ops
+    site: 'datadoghq.eu'
+    credentials:
+      apiSecret:
+        secretName: datadog-credentials
+        keyName: api-key
+      appSecret:
+        secretName: datadog-credentials
+        keyName: app-key
+  features:
+    apm:
+      instrumentation:
+        enabled: true
+        libVersions:
+          java: "1"
+          python: "2"
+          js: "5"
+          dotnet: "3"
+          ruby: "2"
+    logCollection:
+      enabled: true
+      containerCollectAll: true
+    liveProcessCollection:
+      enabled: true
+    # oomKill:
+    #   enabled: true
+    # tcpQueueLength:
+    #   enabled: true
+    ebpfCheck:
+      enabled: true
+    npm:
+      enabled: true
+    usm:
+      enabled: true
+    # serviceDiscovery:
+    #   enabled: true
+    admissionController:
+      mutateUnlabelled: true
+    externalMetricsServer:
+      enabled: true
+    prometheusScrape:
+      enabled: true
+  override:
+    clusterAgent:
+      image:
+        name: gcr.io/datadoghq/cluster-agent:7.59.0
+    nodeAgent:
+      image:
+        name: gcr.io/datadoghq/agent:7.59.0
