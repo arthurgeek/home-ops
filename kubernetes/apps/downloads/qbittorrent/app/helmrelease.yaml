@@ -109,7 +109,7 @@ spec:
               QBT_Network__PortForwardingEnabled: "false"
             image:
               repository: ghcr.io/onedr0p/qbittorrent
-              tag: 5.0.2@sha256:2dbd2887ed7c789fe957411ac19631161243bc4301402dc3e6850329beefa816
+              tag: 5.0.3@sha256:ca2c1cd12c175be403464277d2466fb887f4dec6157a007fea9022f3368789be
             resources:
               requests:
                 memory: 2Gi
