@@ -57,7 +57,7 @@ spec:
                     key: api-key
             image:
               repository: ghcr.io/onedr0p/radarr-develop
-              tag: 5.16.0.9485@sha256:f21d401a2ce6ebf5401c4dc71e3184ece740fff227a6af0ffa1a51fe4af7627c
+              tag: 5.19.3.9730@sha256:dd64f1786f50ae79013822ce196e3e7bd20db369bd51d63d63c42f7821b77317
             resources:
               requests:
                 memory: 300M
