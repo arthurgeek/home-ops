@@ -44,7 +44,7 @@ spec:
               TS_KUBE_SECRET: ""
               SA_NAME: tailscale
               TS_USERSPACE: true
-              TS_ROUTES: "192.168.1.0/24"
+              TS_ROUTES: "192.168.50.0/24"
               TS_EXTRA_ARGS: "--advertise-exit-node"
               TS_TAILSCALED_EXTRA_ARGS: --debug=0.0.0.0:9001
               TS_STATE_DIR: &path /tmp
@@ -102,7 +102,7 @@ spec:
         controller: *app
         type: LoadBalancer
         annotations:
-          io.cilium/lb-ipam-ips: "192.168.1.224"
+          io.cilium/lb-ipam-ips: "192.168.50.224"
         ports:
           tailnet:
             port: *port

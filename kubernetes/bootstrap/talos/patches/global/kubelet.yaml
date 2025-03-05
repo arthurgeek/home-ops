@@ -4,4 +4,4 @@ machine:
       rotate-server-certificates: true
     nodeIP:
       validSubnets:
-        - 192.168.1.0/24
+        - 192.168.50.0/24

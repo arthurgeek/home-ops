@@ -72,7 +72,7 @@ spec:
               DOT: off
               DNS_KEEP_NAMESERVER: on
               FIREWALL_INPUT_PORTS: "8080,9999"
-              FIREWALL_OUTBOUND_SUBNETS: "192.168.1.0/24,10.0.0.0/8"
+              FIREWALL_OUTBOUND_SUBNETS: "192.168.50.0/24,10.0.0.0/8"
               HEALTH_SERVER_ADDRESS: ":9999"
               VERSION_INFORMATION: off
             envFrom:
