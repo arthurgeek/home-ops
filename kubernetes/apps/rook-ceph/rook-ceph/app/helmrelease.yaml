@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1beta2.json
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: rook-ceph
+spec:
+  interval: 5m
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: v1.17.2
+  url: oci://ghcr.io/rook/rook-ceph
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rook-ceph-operator
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: rook-ceph
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    monitoring:
+      enabled: true
+
+    csi:
+      cephFSKernelMountOptions: ms_mode=prefer-crc
+      # NOTE: Enable the driver and shapshotter if you want to use CephFS
+      enableCephfsDriver: false
+      enableCephfsSnapshotter: false
+      enableLiveness: true
+      serviceMonitor:
+        enabled: true
+
+    enableDiscoveryDaemon: true
+
+    image:
+      repository: ghcr.io/rook/ceph
+
+    csiRBDProvisionerResource: |
+      - name : csi-rbdplugin
+        resource:
+          requests:
+            memory: 512Mi
+            cpu: 50m
+          limits:
+            memory: 1Gi
+
+    csiRBDPluginResource: |
+      - name : csi-rbdplugin
+        resource:
+          requests:
+            memory: 512Mi
+            cpu: 50m
+          limits:
+            memory: 1Gi
