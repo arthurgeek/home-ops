@@ -2,10 +2,9 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: flux-system
+namespace: storage
 components:
   - ../../components/common
+  - ../../components/repos/app-template
 resources:
-  - ./flux-instance/ks.yaml
-  - ./flux-operator/ks.yaml
-  - ./weave-gitops/ks.yaml
+  - ./minio/ks.yaml
