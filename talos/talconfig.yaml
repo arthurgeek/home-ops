@@ -24,7 +24,7 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bca8b14bc59757105cbfd120465d1c07fb60a89b05e807751f4842ec736068af
+    talosImageURL: factory.talos.dev/metal-installer/c9920067f31bfb0a8c9771bebb629ad7f71071df527b56ccb1ed26c3a89fccbc
     controlPlane: true
     networkInterfaces:
       - deviceSelector:
@@ -43,7 +43,7 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bca8b14bc59757105cbfd120465d1c07fb60a89b05e807751f4842ec736068af
+    talosImageURL: factory.talos.dev/metal-installer/e12498bfb29988e5812df78b9292ff4f17e130b6cd3edaaee6934b105c1ea463
     controlPlane: true
     networkInterfaces:
       - deviceSelector:
@@ -62,7 +62,7 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    talosImageURL: factory.talos.dev/installer/bca8b14bc59757105cbfd120465d1c07fb60a89b05e807751f4842ec736068af
+    talosImageURL: factory.talos.dev/metal-installer/e12498bfb29988e5812df78b9292ff4f17e130b6cd3edaaee6934b105c1ea463
     controlPlane: true
     networkInterfaces:
       - deviceSelector:
@@ -82,6 +82,7 @@ patches:
   - "@./patches/global/machine-files.yaml"
   - "@./patches/global/machine-kubelet.yaml"
   - "@./patches/global/machine-network.yaml"
+  - "@./patches/global/machine-nodelabels.yaml"
   - "@./patches/global/machine-sysctls.yaml"
   - "@./patches/global/machine-time.yaml"
 
@@ -90,4 +91,3 @@ controlPlane:
   patches:
     - "@./patches/controller/admission-controller-patch.yaml"
     - "@./patches/controller/cluster.yaml"
-
