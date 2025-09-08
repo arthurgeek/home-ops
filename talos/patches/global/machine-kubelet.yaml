@@ -5,3 +5,11 @@ machine:
     nodeIP:
       validSubnets:
         - 192.168.50.0/24
+    extraMounts:
+      - destination: /var/openebs/local
+        type: bind
+        source: /var/openebs/local
+        options:
+          - rbind
+          - rshared
+          - rw
