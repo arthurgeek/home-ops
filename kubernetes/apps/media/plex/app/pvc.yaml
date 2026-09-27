@@ -1,0 +1,12 @@
+---
+# Rebuildable, so it stays out of the volsync backups.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plex-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: openebs-hostpath
