@@ -1,0 +1,37 @@
+---
+# The TrueNAS media dataset: the library and, under Downloads, the torrents,
+# so imports are hardlinks. A static PV keeps the NFS mount options and never
+# deletes the data.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-media
+spec:
+  accessModes: ["ReadWriteMany"]
+  capacity:
+    storage: 1Mi # not enforced for NFS
+  claimRef:
+    name: media
+    namespace: media
+  mountOptions:
+    - nfsvers=4.1
+    - nconnect=12
+    - hard
+    - noatime
+  nfs:
+    server: 10.10.5.10 # TrueNAS
+    path: /mnt/bulk/media
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+spec:
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 1Mi
+  storageClassName: ""
+  volumeName: media-media
