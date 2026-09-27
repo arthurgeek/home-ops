@@ -205,12 +205,12 @@ These guidelines provide a strong baseline, but there are always exceptions and 
     nmap -Pn -n -p 443 ${gateways_internal} ${gateways_external} -vv
     ```
 
-4. Check you can resolve DNS for `echo`, this should resolve to `${gateways_external}`:
+4. Check you can resolve DNS for `echo` from a device on your LAN, this should be a CNAME to `external.${cloudflare_domain}` resolving to `${gateways_external}`:
 
     📍 _The variables are only placeholders, replace them with your actual values_
 
     ```sh
-    dig @${gateways_dns} echo.${cloudflare_domain}
+    dig echo.${cloudflare_domain}
     ```
 
 5. Check the status of your wildcard `Certificate`:
@@ -231,7 +231,9 @@ The `external-dns` application created in the `network` namespace will handle cr
 > [!TIP]
 > Use the `envoy-internal` gateway on `HTTPRoutes` to make applications private to your network. If you're having trouble with internal DNS resolution check out [this](https://github.com/onedr0p/cluster-template/discussions/719) GitHub discussion.
 
-`k8s_gateway` will provide DNS resolution to external Kubernetes resources (i.e. points of entry to the cluster) from any device that uses your home DNS server. For this to work, your home DNS server must be configured to forward DNS queries for `${cloudflare_domain}` to `${gateways_dns}` instead of the upstream DNS server(s) it normally uses. This is a form of **split DNS** (aka split-horizon DNS / conditional forwarding).
+A second `external-dns` instance (`unifi-dns` in the `network` namespace) writes records for every `HTTPRoute` into the UniFi gateway's DNS through the [UniFi webhook](https://github.com/home-operations/external-dns-unifi-webhook). It publishes `internal.${cloudflare_domain}` and `external.${cloudflare_domain}` for the two gateways and a CNAME per app, so devices on the LAN (and the Talos nodes, which use the gateway as their resolver) reach apps directly, including public ones. It needs a UniFi API key (UniFi Network → Settings → Control Plane → Integrations) stored in 1Password as `apiKey` on the `Unifi` item.
+
+Records for servers outside Kubernetes can be added by hand in UniFi; `external-dns` only manages the records it created.
 
 _... Nothing working? That is expected, this is DNS after all!_
 
@@ -407,16 +409,7 @@ Below are some optional considerations you may want to explore.
 
 ### DNS
 
-The template uses [k8s_gateway](https://github.com/k8s-gateway/k8s_gateway) to provide DNS for your applications, consider exploring [external-dns](https://github.com/kubernetes-sigs/external-dns) as an alternative.
-
-External-DNS offers broad support for various DNS providers, including but not limited to:
-
-- [Pi-hole](https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/pihole.md)
-- [UniFi](https://github.com/kashalls/external-dns-unifi-webhook)
-- [Adguard Home](https://github.com/muhlba91/external-dns-provider-adguard)
-- [Bind](https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/rfc2136.md)
-
-This flexibility allows you to integrate seamlessly with a range of DNS solutions to suit your environment and offload DNS from your cluster to your router, or external device.
+This cluster uses `external-dns` for both public (Cloudflare) and home (UniFi) DNS; see [Home DNS](#-home-dns).
 
 ### Secrets
 

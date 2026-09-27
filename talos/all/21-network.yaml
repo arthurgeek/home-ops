@@ -1,7 +1,8 @@
 apiVersion: v1alpha1
 kind: ResolverConfig
+# The UniFi gateway, so nodes and pods resolve the records external-dns
+# writes there for this cluster's own hostnames.
 nameservers:
-  - address: 1.1.1.1
-  - address: 1.0.0.1
+  - address: 10.10.5.1
 searchDomains:
   disableDefault: true
