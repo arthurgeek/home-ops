@@ -1,0 +1,42 @@
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDInstance
+metadata:
+  name: pocket-id
+spec:
+  image: ghcr.io/pocket-id/pocket-id:v2.16.0-distroless@sha256:f5ce1e58392f48a8fb8a1ff22a714272a49a52b8582d87deb530823f95359204
+  appUrl: https://id.${SECRET_DOMAIN}
+  timezone: America/Sao_Paulo
+  # Encrypts sensitive data in the database; kept in 1Password so a restored
+  # backup stays readable.
+  encryptionKey:
+    valueFrom:
+      secretKeyRef:
+        name: pocket-id-secret
+        key: ENCRYPTION_KEY
+  analyticsDisabled: true
+  versionCheckDisabled: true
+  route:
+    enabled: true
+    hostnames:
+      - id.${SECRET_DOMAIN}
+    parentRefs:
+      - name: envoy-internal
+        namespace: network
+        sectionName: https
+  # SQLite. Users, groups and OIDC clients are declared in git and recreated
+  # by the operator; only passkeys live solely here.
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ceph-block
+  # The distroless image runs as nonroot (65532).
+  podSecurityContext:
+    fsGroup: 65532
+    fsGroupChangePolicy: OnRootMismatch
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
