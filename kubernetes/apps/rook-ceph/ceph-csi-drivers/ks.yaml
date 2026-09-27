@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ceph-csi-drivers
+spec:
+  dependsOn:
+    - name: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/rook-ceph/ceph-csi-drivers/app
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: rook-ceph
+  # rook-ceph-cluster's storage classes need these drivers.
+  wait: true

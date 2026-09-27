@@ -1,0 +1,22 @@
+# Split the system disk: cap EPHEMERAL (/var: etcd, images, logs) and let a
+# user volume for OpenEBS hostpath, mounted at /var/mnt/openebs, grow into the
+# rest (~118GB on the 240GB SanDisk).
+# The NVMe stays whole for Ceph.
+#
+# Talos applies this when it creates partitions, so a fresh install gets it
+# for free. Existing nodes need EPHEMERAL wiped once to shrink it; see
+# README.md.
+apiVersion: v1alpha1
+kind: VolumeConfig
+name: EPHEMERAL
+provisioning:
+  maxSize: 120GB
+---
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: openebs
+provisioning:
+  diskSelector:
+    match: system_disk
+  minSize: 100GB
+  grow: true

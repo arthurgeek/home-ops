@@ -1,0 +1,9 @@
+---
+# Not published as OCI; this is the upstream ceph-csi-operator Helm repo.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: ceph-csi-operator
+spec:
+  interval: 1h
+  url: https://ceph.github.io/ceph-csi-operator
