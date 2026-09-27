@@ -1,6 +1,6 @@
 # topf isn't in nixpkgs; repackage the upstream release binaries.
-# Renovate bumps `version`; nix/update-topf.sh (run by the renovate-lock
-# workflow) refreshes the per-platform hashes to match.
+# Renovate bumps `version`; nix/update-release-hashes.sh (run by the
+# renovate-lock workflow) refreshes the per-platform hashes to match.
 {
   lib,
   stdenvNoCC,

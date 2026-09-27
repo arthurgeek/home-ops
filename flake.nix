@@ -26,6 +26,7 @@
       devShells = forAllSystems (
         pkgs:
         let
+          flate = pkgs.callPackage ./nix/flate.nix { };
           topf = pkgs.callPackage ./nix/topf.nix { };
 
           tools = with pkgs; [
@@ -34,6 +35,7 @@
             bashInteractive
             age
             cloudflared
+            flate
             fluxcd
             fluxcd-operator-mcp
             gh
