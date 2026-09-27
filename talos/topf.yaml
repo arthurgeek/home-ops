@@ -17,7 +17,7 @@ nodes:
     data:
       installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A0D01"
       installDiskSerial: ""
-      macAddr: "b8:85:84:c0:fe:6c"
+      nicDriver: r8169
       mtu: 1500
       encryptDisk: false
       kernelModules: []
@@ -28,7 +28,7 @@ nodes:
     data:
       installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A0Y08"
       installDiskSerial: ""
-      macAddr: "b8:85:84:c3:bd:cc"
+      nicDriver: r8169
       mtu: 1500
       encryptDisk: false
       kernelModules: []
@@ -39,7 +39,7 @@ nodes:
     data:
       installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A4514"
       installDiskSerial: ""
-      macAddr: "00:be:43:ed:55:1e"
+      nicDriver: r8169
       mtu: 1500
       encryptDisk: false
       kernelModules: []
