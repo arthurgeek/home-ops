@@ -1,0 +1,39 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: obsidian-couchdb
+spec:
+  components:
+    - ../../../../components/volsync
+  dependsOn:
+    - name: onepassword-store
+      namespace: external-secrets
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+    - name: rustfs
+      namespace: storage
+    - name: volsync
+      namespace: volsync-system
+  interval: 1h
+  path: ./kubernetes/apps/database/obsidian-couchdb/app
+  postBuild:
+    substitute:
+      APP: obsidian-couchdb
+      VOLSYNC_CLAIM: obsidian-couchdb-data
+      VOLSYNC_CAPACITY: 2Gi
+      # The data is owned by the couchdb user (5984) and group 0; movers run
+      # as that pair so restic can restore ownership without extra
+      # capabilities.
+      APP_UID: "5984"
+      APP_GID: "0"
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: database
+  wait: false
