@@ -66,6 +66,12 @@ spec:
               args:
                 nodeAffinityType:
                   - requiredDuringSchedulingIgnoredDuringExecution
+                  - preferredDuringSchedulingIgnoredDuringExecution
+                # Preferred affinity only moves Plex (back to its GPU node);
+                # other charts' soft preferences stay as scheduled.
+                namespaces:
+                  include:
+                    - media
             - name: RemovePodsViolatingNodeTaints
             - name: RemovePodsViolatingTopologySpreadConstraint
           plugins:

@@ -1,16 +1,27 @@
 ---
-# The 12th-gen UHD 730 (k8s-2); newer media engine than the other nodes' UHD 630.
+# Prefers a 12th-gen iGPU (k8s-2's UHD 730, or UHD 770), whose media engine
+# also decodes AV1; falls back to the 8th-gen UHD 630 on the other nodes.
 apiVersion: resource.k8s.io/v1
 kind: ResourceClaimTemplate
 metadata:
   name: plex
+  annotations:
+    # The spec is immutable; recreate the template when it changes. Claims
+    # already made from it are unaffected.
+    kustomize.toolkit.fluxcd.io/force: enabled
 spec:
   spec:
     devices:
       requests:
         - name: gpu
-          exactly:
-            deviceClassName: gpu.intel.com
-            selectors:
-              - cel:
-                  expression: device.attributes["gpu.intel.com"].pciId == "0x4692"
+          firstAvailable:
+            - name: gen12
+              deviceClassName: gpu.intel.com
+              selectors:
+                - cel:
+                    expression: device.attributes["gpu.intel.com"].pciId in ["0x4692", "0x4690"]
+            - name: gen8
+              deviceClassName: gpu.intel.com
+              selectors:
+                - cel:
+                    expression: device.attributes["gpu.intel.com"].pciId == "0x3e91"
