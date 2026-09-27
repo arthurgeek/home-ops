@@ -30,3 +30,7 @@ stage_fixed = true
 [pre-commit.commands.zizmor]
 glob = [".github/workflows/*.yaml", ".github/actions/**/action.yaml"]
 run = "zizmor --offline {staged_files}"
+
+[pre-commit.commands.kube-validate]
+glob = ["kubernetes/*", "kubernetes/**/*"]
+run = "just kube validate"

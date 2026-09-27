@@ -43,7 +43,7 @@ jobs:
 
       # Release binaries (nix/*.nix) pin per-platform hashes Renovate can't compute.
       - name: Refresh release hashes
-        run: ./nix/update-topf.sh
+        run: ./nix/update-release-hashes.sh
 
       - name: Commit flake.lock and release hashes if they changed
         env:
