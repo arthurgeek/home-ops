@@ -2,12 +2,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: flux-web-viewers
+  name: flux-web-admins
 subjects:
   - kind: Group
-    name: flux-web-viewers
+    name: flux-admins # PocketID group, from the ID token's groups claim
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: flux-web-user # read-only; flux-web-admin adds reconcile/suspend/restart
+  name: flux-web-admin
   apiGroup: rbac.authorization.k8s.io

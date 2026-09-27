@@ -17,3 +17,28 @@ spec:
     namespace: flux-system
   targetNamespace: flux-system
   wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-operator-web
+spec:
+  dependsOn:
+    - name: flux-operator
+    - name: onepassword-store
+      namespace: external-secrets
+    - name: pocket-id-operator
+      namespace: security
+  interval: 1h
+  path: ./kubernetes/apps/flux-system/flux-operator/web
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: flux-system
+  wait: true
