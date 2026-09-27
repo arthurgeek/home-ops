@@ -1,6 +1,7 @@
 ---
-# Per-app backups to RustFS with restic. An app's PVC is created from the
-# ReplicationDestination, so its first deploy restores the latest backup.
+# Per-app restores from restic repositories on RustFS. An app's PVC is created
+# from the ReplicationDestination, so its first deploy restores the latest
+# backup; the ReplicationSource (backups) is paused.
 # Vars: APP, VOLSYNC_CLAIM (required); VOLSYNC_CAPACITY, VOLSYNC_CACHE_CAPACITY,
 # VOLSYNC_STORAGECLASS, VOLSYNC_ACCESSMODES, APP_UID, APP_GID (optional).
 apiVersion: kustomize.config.k8s.io/v1alpha1
