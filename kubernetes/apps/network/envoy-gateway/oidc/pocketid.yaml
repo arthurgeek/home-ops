@@ -1,0 +1,31 @@
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUserGroup
+metadata:
+  name: gateway-users
+spec:
+  name: gateway-users
+  friendlyName: Gateway Users
+  users:
+    userRefs:
+      - name: owner
+        namespace: security
+---
+# One client for every route behind the gateway login; Envoy redirects to
+# /oauth2/callback on the route's own hostname.
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDOIDCClient
+metadata:
+  name: envoy
+spec:
+  name: Gateway
+  clientID: envoy
+  clientSecretRef:
+    name: envoy-oidc
+    key: client-secret
+  callbackUrls:
+    - https://*.${SECRET_DOMAIN}/oauth2/callback
+  allowedUserGroups:
+    - name: gateway-users
+  secret:
+    enabled: false
