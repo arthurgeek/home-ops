@@ -1,0 +1,87 @@
+---
+# Evicts pods so the scheduler can place them better: rebalances nodes by
+# actual usage (metrics-server) and clears failed or rule-violating pods.
+# Evictions go through the eviction API, so PodDisruptionBudgets hold.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: descheduler
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: descheduler
+  interval: 1h
+  values:
+    kind: Deployment
+    # Wakes up periodically and idles at a few millicores; the chart's
+    # default request reserves half a core.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    deschedulerPolicyAPIVersion: descheduler/v1alpha2
+    deschedulerPolicy:
+      metricsProviders:
+        - source: KubernetesMetrics
+      profiles:
+        - name: Default
+          pluginConfig:
+            - name: DefaultEvictor
+              args:
+                podProtections:
+                  defaultDisabled:
+                    - FailedBarePods
+                    - PodsWithLocalStorage
+                    - SystemCriticalPods
+            - name: LowNodeUtilization
+              args:
+                metricsUtilization:
+                  source: KubernetesMetrics
+                # Nodes under all of these are underused; pods move off
+                # nodes above any of the targets.
+                thresholds:
+                  cpu: 20
+                  memory: 20
+                  pods: 20
+                targetThresholds:
+                  cpu: 50
+                  memory: 50
+                  pods: 50
+            - name: RemoveFailedPods
+              args:
+                reasons:
+                  - ContainerStatusUnknown
+                  - NodeAffinity
+                  - NodeShutdown
+                  - Terminated
+                  - UnexpectedAdmissionError
+                includingInitContainers: true
+                excludeOwnerKinds:
+                  - Job
+                minPodLifetimeSeconds: 1800
+            - name: RemovePodsViolatingInterPodAntiAffinity
+            - name: RemovePodsViolatingNodeAffinity
+              args:
+                nodeAffinityType:
+                  - requiredDuringSchedulingIgnoredDuringExecution
+            - name: RemovePodsViolatingNodeTaints
+            - name: RemovePodsViolatingTopologySpreadConstraint
+          plugins:
+            balance:
+              enabled:
+                - LowNodeUtilization
+                - RemovePodsViolatingTopologySpreadConstraint
+            deschedule:
+              enabled:
+                - RemoveFailedPods
+                - RemovePodsViolatingInterPodAntiAffinity
+                - RemovePodsViolatingNodeAffinity
+                - RemovePodsViolatingNodeTaints
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+    leaderElection:
+      enabled: true
