@@ -11,3 +11,25 @@ spec:
   values:
     serviceMonitor:
       create: true
+    web:
+      config:
+        # LAN-only (internal gateway); anonymous visitors get the read-only
+        # role bound in clusterrolebinding.yaml.
+        authentication:
+          type: Anonymous
+          anonymous:
+            username: flux
+            groups:
+              - flux-web-viewers
+      httpRoute:
+        enabled: true
+        hostnames:
+          - flux.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+      # The chart's policy admits only the UI port (9080) on the operator
+      # pod, which would also block scraping its metrics.
+      networkPolicy:
+        create: false
