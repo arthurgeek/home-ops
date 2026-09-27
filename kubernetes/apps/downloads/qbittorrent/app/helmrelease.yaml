@@ -1,0 +1,109 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app qbittorrent
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: qbittorrent
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/qbittorrent-libtorrentv1
+              tag: 5.2.3@sha256:8a15de24cabfca8041788773436cb176378ff7735e5cb0b2fd94984d4fac6968
+            env:
+              # The WebUI skips its own login for the pod network and the node
+              # IPs (qBittorrent.conf): the gateway, the *arr apps and the
+              # kubelet's probes.
+              QBT_WEBUI_PORT: &port 8080
+              QBT_TORRENTING_PORT: 50413
+              TZ: America/Sao_Paulo
+            probes:
+              liveness:
+                enabled: true
+                spec:
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v2/app/version
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 10
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+              limits:
+                memory: 8Gi
+          # Reannounces torrents whose trackers are failing; reaches the WebUI
+          # on localhost, where qBittorrent skips its login.
+          qbrr:
+            image:
+              repository: ghcr.io/buroa/qbrr
+              tag: 0.1.6@sha256:50baeb6633f144b7220777c56a8d501ea708d43043e28eb416d93e4e96efe06b
+            env:
+              QBITTORRENT_HOST: http://localhost:8080
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 128Mi
+    defaultPodOptions:
+      # Time to write resume data for every torrent on shutdown.
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        labels:
+          oidc: pocket-id
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+    persistence:
+      config:
+        existingClaim: *app
+      # Downloads land in /data/Media/Downloads/torrents, next to the library.
+      media:
+        existingClaim: media
+        globalMounts:
+          - path: /data/Media
+      tmp:
+        type: emptyDir
