@@ -1,0 +1,58 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pocket-id-operator
+spec:
+  interval: 1h
+  path: ./kubernetes/apps/security/pocket-id/operator
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: security
+  # The instance and resources below need the CRDs this installs.
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pocket-id-instance
+spec:
+  dependsOn:
+    - name: onepassword-store
+      namespace: external-secrets
+    - name: pocket-id-operator
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/security/pocket-id/instance
+  postBuild:
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: security
+  wait: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pocket-id-resources
+spec:
+  dependsOn:
+    - name: pocket-id-instance
+  interval: 1h
+  path: ./kubernetes/apps/security/pocket-id/resources
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: security
+  wait: false

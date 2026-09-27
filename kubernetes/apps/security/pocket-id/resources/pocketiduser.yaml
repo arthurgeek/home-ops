@@ -1,0 +1,13 @@
+---
+# First login: open status.oneTimeLoginURL (valid 60 minutes after creation)
+# to register a passkey.
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUser
+metadata:
+  name: owner
+spec:
+  # Pinned so the OIDC subject stays the same if PocketID is rebuilt.
+  userID: 939951e0-0933-4a69-9152-c9d727c06b19
+  userInfoSecretRef:
+    name: pocket-id-owner
+  admin: true
