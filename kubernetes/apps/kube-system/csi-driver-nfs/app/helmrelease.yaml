@@ -1,0 +1,25 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: csi-driver-nfs
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: csi-driver-nfs
+  interval: 1h
+  values:
+    # Dynamic volumes on TrueNAS: one subdirectory per PVC under the share.
+    storageClass:
+      create: true
+      name: nfs
+      parameters:
+        server: 10.10.5.10 # TrueNAS; its DNS name goes through Envoy, not NFS
+        share: /mnt/fast/k8s
+      mountOptions:
+        - nfsvers=4.1
+        - nconnect=12
+        - hard
+        - noatime
+      reclaimPolicy: Delete
+      volumeBindingMode: Immediate
