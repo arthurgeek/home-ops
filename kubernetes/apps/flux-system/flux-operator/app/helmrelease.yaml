@@ -12,15 +12,8 @@ spec:
     serviceMonitor:
       create: true
     web:
-      config:
-        # LAN-only (internal gateway); anonymous visitors get the read-only
-        # role bound in clusterrolebinding.yaml.
-        authentication:
-          type: Anonymous
-          anonymous:
-            username: flux
-            groups:
-              - flux-web-viewers
+      # Rendered from 1Password by ../web; logins go through PocketID.
+      configSecretName: flux-web-config
       httpRoute:
         enabled: true
         hostnames:

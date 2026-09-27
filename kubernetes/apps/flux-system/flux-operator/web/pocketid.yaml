@@ -1,0 +1,31 @@
+---
+# Bound to flux-web-admin in clusterrolebinding.yaml.
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUserGroup
+metadata:
+  name: flux-admins
+spec:
+  name: flux-admins
+  friendlyName: Flux Admins
+  users:
+    userRefs:
+      - name: owner
+        namespace: security
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDOIDCClient
+metadata:
+  name: flux
+spec:
+  name: Flux
+  clientID: flux
+  clientSecretRef:
+    name: flux-web-config
+    key: client_secret
+  callbackUrls:
+    - https://flux.${SECRET_DOMAIN}/oauth2/callback
+  launchUrl: https://flux.${SECRET_DOMAIN}
+  allowedUserGroups:
+    - name: flux-admins
+  secret:
+    enabled: false

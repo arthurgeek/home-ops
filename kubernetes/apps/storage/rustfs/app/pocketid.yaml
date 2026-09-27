@@ -1,0 +1,36 @@
+---
+# RustFS maps the rustfs_policy claim to its policies; consoleAdmin is its
+# built-in full-access policy.
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUserGroup
+metadata:
+  name: rustfs-admins
+spec:
+  name: rustfs-admins
+  friendlyName: RustFS Admins
+  customClaims:
+    - key: rustfs_policy
+      value: consoleAdmin
+  users:
+    userRefs:
+      - name: owner
+        namespace: security
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDOIDCClient
+metadata:
+  name: rustfs
+spec:
+  name: RustFS
+  clientID: rustfs
+  clientSecretRef:
+    name: rustfs-secret
+    key: RUSTFS_IDENTITY_OPENID_CLIENT_SECRET
+  callbackUrls:
+    - https://rustfs.${SECRET_DOMAIN}/rustfs/admin/v3/oidc/callback/default
+  launchUrl: https://rustfs.${SECRET_DOMAIN}
+  pkceEnabled: true
+  allowedUserGroups:
+    - name: rustfs-admins
+  secret:
+    enabled: false
