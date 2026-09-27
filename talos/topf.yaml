@@ -1,0 +1,45 @@
+---
+clusterName: kubernetes
+clusterEndpoint: https://10.10.5.254:6443
+
+# renovate: datasource=github-releases depName=siderolabs/talos
+talosVersion: v1.14.1
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.37.1
+
+secretsPath: secrets.sops.yaml
+
+nodes:
+  - host: "k8s-0"
+    ip: "10.10.5.150"
+    role: control-plane
+    schematicId: "039535a70c3bd1667c355eca78571267704e55c8a24785033d183b8f26e39d82"
+    data:
+      installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A0D01"
+      installDiskSerial: ""
+      macAddr: "b8:85:84:c0:fe:6c"
+      mtu: 1500
+      encryptDisk: false
+      kernelModules: []
+  - host: "k8s-1"
+    ip: "10.10.5.151"
+    role: control-plane
+    schematicId: "039535a70c3bd1667c355eca78571267704e55c8a24785033d183b8f26e39d82"
+    data:
+      installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A0Y08"
+      installDiskSerial: ""
+      macAddr: "b8:85:84:c3:bd:cc"
+      mtu: 1500
+      encryptDisk: false
+      kernelModules: []
+  - host: "k8s-2"
+    ip: "10.10.5.152"
+    role: control-plane
+    schematicId: "039535a70c3bd1667c355eca78571267704e55c8a24785033d183b8f26e39d82"
+    data:
+      installDisk: "/dev/disk/by-id/ata-SanDisk_SSD_PLUS_240GB_2406324A4514"
+      installDiskSerial: ""
+      macAddr: "00:be:43:ed:55:1e"
+      mtu: 1500
+      encryptDisk: false
+      kernelModules: []
