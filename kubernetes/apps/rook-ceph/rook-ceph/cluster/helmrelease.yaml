@@ -69,6 +69,9 @@ spec:
           requireMsgr2: true
       security:
         cephx:
+          # Only once every key is aes256k (`ceph auth dump-keys`); otherwise
+          # clients holding aes keys are locked out.
+          allowedCiphers: [aes256k]
           # Rook creates CSI keys as aes, which Ceph Tentacle flags as insecure;
           # Talos 1.14 backports the kernel 7.0 aes256k support. No prior keys
           # are kept: nothing was mounted with the old ones.
