@@ -35,6 +35,7 @@
             age
             cloudflared
             fluxcd
+            fluxcd-operator-mcp
             gh
             gum
             helmfile

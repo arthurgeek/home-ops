@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flux-operator": {
+      "command": "direnv",
+      "args": ["exec", ".", "flux-operator-mcp", "serve", "--read-only"]
+    }
+  }
+}
