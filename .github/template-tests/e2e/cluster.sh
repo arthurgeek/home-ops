@@ -10,7 +10,7 @@
 #     post step destroys them.
 #   - Local: run with no env set; the script boots and destroys the cluster
 #     itself. Requires Docker, /dev/kvm, passwordless sudo, qemu-system-x86,
-#     and the repo's mise toolchain on PATH.
+#     and the repo's Nix dev shell (`nix develop .#template`).
 #
 # Renders into the working tree like any configure run.
 set -euo pipefail

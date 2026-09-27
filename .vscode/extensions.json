@@ -4,6 +4,7 @@
     "irongeek.vscode-env",
     "redhat.vscode-yaml",
     "signageos.signageos-vscode-sops",
-    "hverlin.mise-vscode"
+    "mkhl.direnv",
+    "jnoortheen.nix-ide"
   ]
 }

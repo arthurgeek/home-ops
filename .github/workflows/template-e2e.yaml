@@ -54,10 +54,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup Nix
+        uses: $/.github/actions/setup-nix
 
       - name: Assert schema rejects ${{ matrix.fixture }}.toml
         run: |
@@ -82,10 +80,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup Nix
+        uses: $/.github/actions/setup-nix
 
       - name: Run validator tests
         run: uv run --quiet --locked pytest ./template/scripts/test_validate.py
@@ -114,11 +110,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          experimental: true
-          install_args: --locked
+      - name: Setup Nix
+        uses: $/.github/actions/setup-nix
 
       - name: Run init recipe
         run: just init

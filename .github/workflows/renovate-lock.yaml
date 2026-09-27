@@ -1,0 +1,118 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: "Renovate flake.lock"
+
+# Renovate's custom regex managers bump the input SHAs in flake.nix and the
+# release versions in nix/*.nix, but the Mend-hosted app can't run nix to
+# refresh flake.lock or the release hashes. This workflow does that step
+# instead: whenever Renovate pushes a branch, it re-locks and commits the
+# result back onto the same branch, then checks the dev shells on Linux and
+# macOS and reports the result as statuses on the PR. Commits made with
+# GITHUB_TOKEN don't retrigger workflows, so there's no loop.
+
+on:
+  push:
+    branches:
+      - "renovate/**"
+
+permissions: {}
+
+# A Renovate rebase force-pushes the branch; supersede any in-flight run so we
+# only ever lock against the latest tree.
+concurrency:
+  group: renovate-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lock:
+    name: lock
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Re-lock flake inputs
+        run: nix flake lock
+
+      # Release binaries (nix/*.nix) pin per-platform hashes Renovate can't compute.
+      - name: Refresh release hashes
+        run: ./nix/update-topf.sh
+
+      - name: Commit flake.lock and release hashes if they changed
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if git diff --quiet -- flake.lock nix; then
+            echo "flake.lock and release hashes already in sync; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock nix
+          git commit -m "build(flake): sync flake.lock and release hashes"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" "HEAD:${BRANCH}"
+
+  # Realise both dev shells on every Renovate branch, whatever it bumped: a
+  # package dropped or renamed in nixpkgs, or a stale release hash, surfaces
+  # here instead of on the next `direnv allow`. Each OS gets its own runner,
+  # since the shells pull different binaries per platform.
+  check:
+    name: check (${{ matrix.os }})
+    needs: lock
+    if: ${{ always() && needs.lock.result != 'cancelled' }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      # For the commit status below.
+      statuses: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      # The branch, not the pushed commit: the lock job may have added one.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Check dev shells
+        id: check
+        run: |
+          nix flake check
+          for shell in default template; do
+            nix develop ".#${shell}" --command bash -euo pipefail -c '
+              topf --help > /dev/null
+              talosctl version --client --short
+            '
+          done
+
+      # The job's own check is attached to the commit Renovate pushed, which
+      # the lock commit may have superseded, so report on the branch's head.
+      - name: Report status on the branch head
+        if: ${{ always() && steps.check.outcome != 'skipped' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OS: ${{ matrix.os }}
+          REPOSITORY: ${{ github.repository }}
+          STATE: ${{ steps.check.outcome == 'success' && 'success' || 'failure' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api "repos/${REPOSITORY}/statuses/$(git rev-parse HEAD)" \
+            -f state="$STATE" \
+            -f context="renovate-lock / check ${OS}" \
+            -f description="dev shells on ${OS}: $STATE" \
+            -f target_url="$RUN_URL"

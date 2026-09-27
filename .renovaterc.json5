@@ -8,9 +8,32 @@
     commitMessageExtra: "({{manager}})",
     additionalBranchPrefix: "{{manager}}-",
   },
-  mise: {
-    managerFilePatterns: ["/^\\.mise/conf\\.d/[^/]+\\.toml$/"],
+  // Renovate can't run nix on the hosted app, so the built-in nix manager is
+  // off: flake.nix inputs are pinned to SHAs and bumped by the regex managers
+  // below, then .github/workflows/renovate-lock.yaml re-locks the branch.
+  nix: {
+    enabled: false,
   },
+  gitIgnoredAuthors: ["41898282+github-actions[bot]@users.noreply.github.com"],
+  customManagers: [
+    {
+      description: "Pin flake.nix inputs to commit SHAs; track release tag or branch via the trailing comment",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)flake\\.nix$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?\\s*\\n\\s*.*?"github:[^"]+/(?<currentDigest>[0-9a-f]{40})";\\s*#\\s*(?<currentValue>\\S+)',
+      ],
+    },
+    {
+      description: "Nix packages built from upstream releases; hashes are refreshed by the renovate-lock workflow",
+      customType: "regex",
+      managerFilePatterns: ["/^nix/[^/]+\\.nix$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\n\\s*version = "(?<currentValue>[^"]+)";',
+      ],
+      extractVersionTemplate: "^v?(?<version>.*)$",
+    },
+  ],
   packageRules: [
     {
       description: "GitHub Actions Group",
@@ -19,10 +42,10 @@
       minimumReleaseAge: "3 days",
     },
     {
-      description: "Mise Tools Group",
-      matchManagers: ["mise"],
-      groupName: "mise tools",
-      minimumReleaseAge: "3 days",
+      description: "Nix Group",
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["flake.nix", "nix/**"],
+      groupName: "nix",
     },
     {
       description: "Talos Group",

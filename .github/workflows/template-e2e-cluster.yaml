@@ -56,10 +56,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends gettext-base qemu-system-x86 qemu-utils ovmf
 
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Setup Nix
+        uses: $/.github/actions/setup-nix
 
       - name: Boot maintenance-mode nodes
         id: cluster

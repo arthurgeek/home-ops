@@ -7,9 +7,9 @@ glob = ["justfile", "*.just", ".justfile"]
 run = 'for f in {staged_files}; do just --justfile "$f" --fmt; done'
 stage_fixed = true
 
-[pre-commit.commands.format-mise]
-glob = [".mise.toml", ".mise/config.toml", ".mise/conf.d/*.toml"]
-run = "mise fmt"
+[pre-commit.commands.format-nix]
+glob = ["*.nix"]
+run = "nixfmt {staged_files}"
 stage_fixed = true
 
 [pre-commit.commands.format-json]
@@ -26,10 +26,6 @@ stage_fixed = true
 glob = ["*.yaml", "*.yml"]
 run = "oxfmt {staged_files}"
 stage_fixed = true
-
-[pre-commit.commands.mise-lock]
-glob = [".mise.toml", ".mise/config.toml", ".mise/conf.d/*.toml"]
-run = "mise lock && git add .mise/mise.lock"
 
 [pre-commit.commands.zizmor]
 glob = [".github/workflows/*.yaml", ".github/actions/**/action.yaml"]

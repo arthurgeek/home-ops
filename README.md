@@ -19,7 +19,7 @@ A Kubernetes cluster deployed with [Talos Linux](https://github.com/siderolabs/t
 
 **Other features include:**
 
-- Dev env managed w/ [mise](https://mise.jdx.dev/)
+- Dev env managed w/ [Nix flakes](https://nixos.wiki/wiki/Flakes) and [direnv](https://direnv.net/)
 - Workflow automation w/ [GitHub Actions](https://github.com/features/actions)
 - Dependency automation w/ [Renovate](https://www.mend.io/renovate)
 - Flux `HelmRelease` and `Kustomization` diffs w/ [flate](https://github.com/home-operations/flate)
@@ -78,20 +78,19 @@ These guidelines provide a strong baseline, but there are always exceptions and 
 
     📍 _**Not using GitHub?** Any Git provider works (GitLab, Gitea, Forgejo, Codeberg or self-hosted). Create an empty repository on your provider, download this template with `git clone --depth 1 https://github.com/onedr0p/cluster-template`, re-initialize it with `git init` and push it to your repository._
 
-2. **Install** the [Mise CLI](https://mise.jdx.dev/getting-started.html#installing-mise-cli) on your local workstation.
+2. **Install** [Nix](https://nixos.org/download/) with flakes enabled on your local workstation.
 
-3. **Activate** Mise in your shell by following the [activation guide](https://mise.jdx.dev/getting-started.html#activate-mise).
+3. **Install** [direnv](https://direnv.net/docs/installation.html) and [nix-direnv](https://github.com/nix-community/nix-direnv), and hook direnv into your shell.
 
-4. Use `mise` to install the **required** CLI tools:
+4. Allow direnv to load the **required** CLI tools from `flake.nix`:
 
     ```sh
-    mise trust
-    mise install
+    direnv allow
     ```
 
-    📍 _**Having trouble installing the tools?** Try unsetting the `GITHUB_TOKEN` env var and then run these commands again_
+    📍 _**Not using direnv?** Run `nix develop .#template` (or `nix develop` after `just template tidy`) to enter the dev shell manually._
 
-    📍 _**Platforms:** `.mise/mise.lock` pins tool downloads for the platforms listed under `lockfile_platforms` in `.mise/config.toml`: Linux and macOS on amd64 and arm64 (`linux-x64`, `linux-arm64`, `macos-x64`, `macos-arm64`). If you also need musl (e.g. Alpine) or Windows, add the platform to that list (`linux-x64-musl`, `linux-arm64-musl`, `windows-x64`), run `mise lock`, and commit both files. Your own platform is always locked, even when it is not in the list._
+    📍 _**Versions:** tools come from the nixpkgs commit pinned in `flake.nix`, and `topf` (not in nixpkgs) is packaged in `nix/topf.nix`. Renovate bumps both; the `renovate-lock` workflow then re-locks `flake.lock`, refreshes the `topf` hashes and checks the dev shells on Linux and macOS._
 
 5. Logout of the GitHub Container Registry as this may cause authorization problems in future steps when using the public registry:
 
@@ -106,7 +105,7 @@ These guidelines provide a strong baseline, but there are always exceptions and 
 > **Internal-only cluster?** Set `provider = "none"` under `[dns]` in `cluster.toml` and skip this stage entirely: no Cloudflare account, API token, or `cloudflare-tunnel.json` is needed. Nothing is exposed to the internet, apps are reachable on your LAN via the internal gateway, and the wildcard certificate is issued by an in-cluster self-signed CA instead of Let's Encrypt.
 
 > [!WARNING]
-> If any of the commands fail with `command not found` or `unknown command` it means `mise` is either not installed, activated or it could be configured incorrectly.
+> If any of the commands fail with `command not found` or `unknown command` it means the Nix dev shell is not loaded; run `direnv allow` (or `nix develop .#template`) in the repository root.
 
 1. Create a Cloudflare API token for use with cloudflared and external-dns by reviewing the official [documentation](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) and following the instructions below.
 

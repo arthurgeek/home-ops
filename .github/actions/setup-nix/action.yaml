@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+name: Setup Nix dev shell
+description: Install Nix and export a flake dev shell's PATH and env to later steps
+
+inputs:
+  shell:
+    description: Flake devShell to export
+    default: template
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+    - name: Export dev shell
+      shell: bash
+      env:
+        DEV_SHELL: ${{ inputs.shell }}
+      run: |
+        nix develop ".#${DEV_SHELL}" --command bash -euo pipefail -c '
+          # Each $GITHUB_PATH line is prepended, so write them in reverse.
+          tr ":" "\n" <<< "$PATH" | tac >> "$GITHUB_PATH"
+          for var in KUBECONFIG SOPS_CONFIG SOPS_AGE_KEY_FILE TALOSCONFIG UV_PYTHON_DOWNLOADS; do
+            if [ -n "${!var:-}" ]; then
+              echo "${var}=${!var}" >> "$GITHUB_ENV"
+            fi
+          done
+        '
