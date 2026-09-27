@@ -1,0 +1,26 @@
+---
+# S3 clients sign Accept-Encoding, and with compression enabled Envoy strips
+# that header before forwarding (SignatureDoesNotMatch). A route-level policy
+# replaces the gateway's rather than merging, so this repeats it minus
+# compression.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: rustfs-s3
+spec:
+  retry:
+    numRetries: 2
+    retryOn:
+      triggers:
+        - reset
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: rustfs-s3
+  tcpKeepalive: {}
+  timeout:
+    http:
+      # RustFS closes idle keep-alive connections after 75s; reusing one it
+      # already closed breaks uploads ("socket hang up").
+      connectionIdleTimeout: 60s
+      requestTimeout: 0s

@@ -1,0 +1,93 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app rustfs
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: rustfs
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: rustfs/rustfs
+              tag: 1.0.0@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
+            args: ["/data"]
+            env:
+              RUSTFS_ADDRESS: ":9000"
+              RUSTFS_CONSOLE_ADDRESS: ":9001"
+              RUSTFS_CONSOLE_ENABLE: "true"
+              RUSTFS_BROWSER_REDIRECT_URL: https://rustfs.${SECRET_DOMAIN}
+              RUSTFS_SERVER_DOMAINS: s3.${SECRET_DOMAIN}
+            envFrom:
+              - secretRef:
+                  name: rustfs-secret
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: &s3 9000
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 6
+              readiness: *probes
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+    defaultPodOptions:
+      securityContext:
+        # Owner of the data on TrueNAS (chowned from the old Synology IDs).
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+    service:
+      app:
+        ports:
+          http:
+            port: &console 9001
+          s3:
+            port: *s3
+    route:
+      app:
+        hostnames: ["rustfs.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *console
+      s3:
+        hostnames: ["s3.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *s3
+    persistence:
+      data:
+        existingClaim: *app
+        globalMounts:
+          - path: /data
