@@ -130,9 +130,7 @@ spec:
           - path: /config/Library/Application Support/Plex Media Server/Cache
       # Library paths in Plex's database are /data/Media/{Movies,TV}.
       media:
-        type: nfs
-        server: 10.10.5.10 # TrueNAS
-        path: /mnt/bulk/media
+        existingClaim: media
         globalMounts:
           - path: /data/Media
             readOnly: true

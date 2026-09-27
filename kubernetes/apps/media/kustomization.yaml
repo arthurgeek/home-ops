@@ -7,5 +7,6 @@ components:
   - ../../components/sops
 
 resources:
+  - ./media-nfs.yaml
   - ./namespace.yaml
   - ./plex/ks.yaml
