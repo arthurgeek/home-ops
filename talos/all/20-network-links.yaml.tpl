@@ -3,7 +3,9 @@ apiVersion: v1alpha1
 kind: LinkAliasConfig
 name: ethSel0
 selector:
-  match: glob("{{ .Node.Data.macAddr }}", mac(link.hardware_addr))
+  # By driver rather than MAC, so a replacement board keeps its network;
+  # each node has a single physical NIC.
+  match: link.driver == "{{ .Node.Data.nicDriver }}"
 ---
 apiVersion: v1alpha1
 kind: BondConfig
