@@ -4,6 +4,10 @@ kind: ReplicationSource
 metadata:
   name: "${APP}"
 spec:
+  # Backups are paused: the repositories hold the only copies of the old
+  # data, and new runs would age those snapshots out under the retention
+  # below. The component is used for restores only.
+  paused: true
   sourcePVC: "${VOLSYNC_CLAIM}"
   trigger:
     schedule: "0 * * * *"
