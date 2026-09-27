@@ -54,9 +54,21 @@ spec:
                 - name: gpu
               requests:
                 cpu: 100m
+                memory: 1Gi
               limits:
                 memory: 8Gi
     defaultPodOptions:
+      # Favour k8s-2, the node with the 12th-gen iGPU the claim prefers; the
+      # descheduler moves Plex back there when it can.
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["k8s-2"]
       resourceClaims:
         - name: gpu
           resourceClaimTemplateName: plex
@@ -124,8 +136,11 @@ spec:
     persistence:
       config:
         existingClaim: plex-config
+      # Regenerable (thumbnails, metadata caches) and node-local, so Plex can
+      # run on whichever node has a GPU for it.
       cache:
-        existingClaim: plex-cache
+        type: emptyDir
+        sizeLimit: 20Gi
         globalMounts:
           - path: /config/Library/Application Support/Plex Media Server/Cache
       # Library paths in Plex's database are /data/Media/{Movies,TV}.
