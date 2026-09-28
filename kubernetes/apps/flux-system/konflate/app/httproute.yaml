@@ -1,0 +1,29 @@
+---
+# GitHub's webhook deliveries are the only public path. They arrive under
+# the public host Flux's receiver already uses, so konflate gets no public
+# DNS name of its own; its UI and API stay on envoy-internal.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: konflate-hooks
+spec:
+  hostnames: ["flux-webhook.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-external
+      namespace: network
+      sectionName: https
+  rules:
+    - backendRefs:
+        - name: konflate
+          port: 8080
+      matches:
+        - path:
+            type: Exact
+            value: /konflate/hooks
+          method: POST
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /hooks

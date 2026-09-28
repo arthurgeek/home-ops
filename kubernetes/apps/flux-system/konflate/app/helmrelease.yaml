@@ -1,0 +1,43 @@
+---
+# Rendered Flux diffs of open pull requests (mostly Renovate's), reported
+# back on each PR as a check run and a summary comment through a GitHub App.
+# The UI is LAN-only; only the webhook endpoint is public (httproute.yaml).
+# No publicUrl: the repo is public, and it would put the domain in every
+# PR comment and check.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: konflate
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: konflate
+  interval: 1h
+  values:
+    config:
+      repo: github://arthurgeek/home-ops
+      # Charts that pick an API version from the cluster's capabilities
+      # (app-template's routes) need the Gateway API advertised to render v1.
+      helmApiVersions: gateway.networking.k8s.io/v1,gateway.networking.k8s.io/v1/HTTPRoute
+      statusChecks: true
+      prComments: true
+      mcp: true
+      verifyImages: true
+    secret:
+      existingSecret: konflate-secret
+    httpRoute:
+      enabled: true
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+          sectionName: https
+      hostnames:
+        - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+    monitoring:
+      serviceMonitor:
+        enabled: true
+    resources:
+      requests:
+        cpu: 50m
+      limits:
+        memory: 1Gi
