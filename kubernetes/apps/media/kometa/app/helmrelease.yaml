@@ -1,0 +1,103 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app kometa
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: kometa
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        type: cronjob
+        annotations:
+          reloader.stakater.com/auto: "true"
+        cronjob:
+          schedule: "0 5 * * *"
+          timeZone: America/Sao_Paulo
+          concurrencyPolicy: Forbid
+          backoffLimit: 0
+          ttlSecondsAfterFinished: 86400
+        initContainers:
+          # Kometa rewrites its config file, so it gets a writable copy of the
+          # Secret's file; the copy lives outside the backed-up volume.
+          init-config:
+            image:
+              repository: public.ecr.aws/docker/library/busybox
+              tag: 1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
+            command:
+              - sh
+              - -c
+              - cp /secret/config.yml /work/config.yml && mkdir -p /config/assets
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+        containers:
+          app:
+            image:
+              repository: docker.io/kometateam/kometa
+              tag: v2.5.1@sha256:20388de48f0e088ad9feb9904f6a452fd9ef933a79c7b2bf186e388224e8f437
+            env:
+              HOME: /tmp
+              KOMETA_RUN: "true"
+              TZ: America/Sao_Paulo
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+              limits:
+                memory: 2Gi
+    defaultPodOptions:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    persistence:
+      # Holds the original posters that overlays are drawn on, the cache and
+      # the logs.
+      config:
+        existingClaim: *app
+        advancedMounts:
+          kometa:
+            init-config:
+              - path: /config
+            app:
+              - path: /config
+      secret:
+        type: secret
+        name: kometa-secret
+        advancedMounts:
+          kometa:
+            init-config:
+              - path: /secret
+                readOnly: true
+      config-file:
+        type: emptyDir
+        advancedMounts:
+          kometa:
+            init-config:
+              - path: /work
+            app:
+              - path: /config/config.yml
+                subPath: config.yml
+      collections:
+        type: configMap
+        name: kometa-collections
+        advancedMounts:
+          kometa:
+            app:
+              - path: /config/br-ratings.yml
+                subPath: br-ratings.yml
+                readOnly: true
+      tmp:
+        type: emptyDir

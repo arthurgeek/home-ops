@@ -1,0 +1,39 @@
+# Collections by Brazilian age rating (classificação indicativa). The US and
+# unrated values Plex also holds are folded into the closest Brazilian rating.
+dynamic_collections:
+  Classificação Indicativa:
+    type: content_rating
+    title_format: Classificação <<key_name>>
+    other_name: Sem classificação
+    include:
+      - Livre
+      - "10"
+      - "12"
+      - "14"
+      - "16"
+      - "18"
+    addons:
+      Livre:
+        - br/L
+        - br/Livre
+        - G
+        - TV-Y
+        - TV-G
+      "10":
+        - br/10
+        - TV-Y7
+        - TV-PG
+        - PG
+      "12":
+        - br/12
+        - PG-13
+      "14":
+        - br/14
+        - TV-14
+      "16":
+        - br/16
+        - R
+      "18":
+        - br/18
+        - NC-17
+        - TV-MA
