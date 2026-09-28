@@ -5,6 +5,7 @@ namespace: downloads
 
 components:
   - ../../components/sops
+  - ../../components/kopiur/secret
 
 resources:
   - ./media-nfs.yaml

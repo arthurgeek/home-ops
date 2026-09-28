@@ -1,0 +1,43 @@
+---
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: ClusterRepository
+metadata:
+  name: rustfs
+spec:
+  allowedNamespaces:
+    all: true
+  backend:
+    s3:
+      auth:
+        secretRef:
+          name: kopiur-repository-secret
+          namespace: kopiur-system
+      bucket: kopiur
+      endpoint: rustfs.storage.svc.cluster.local:9000
+      region: us-east-1
+      tls:
+        disableTls: true
+  encryption:
+    passwordSecretRef:
+      name: kopiur-repository-secret
+      namespace: kopiur-system
+      key: KOPIA_PASSWORD
+  maintenance:
+    schedule:
+      quick:
+        cron: 0 * * * *
+        jitter: 10m
+      full:
+        cron: 0 3 * * *
+        jitter: 1h
+  moverDefaults:
+    cache:
+      # Kopia's own budgets (5000 MiB each) exceed the cache volumes, so the
+      # sweeper would never run; the metadata budget applies twice.
+      contentCacheSizeMb: 512
+      metadataCacheSizeMb: 512
+  parameters:
+    epoch:
+      minDuration: 1h
+  scheduleDefaults:
+    timezone: America/Sao_Paulo

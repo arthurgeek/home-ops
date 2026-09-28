@@ -1,0 +1,25 @@
+---
+# Writes straight into the new claim (volume populator), so no restored
+# volume is a clone of a snapshot.
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: Restore
+metadata:
+  name: "${APP}"
+spec:
+  policy:
+    onMissingSnapshot: Continue
+  source:
+    fromPolicy:
+      name: "${APP}"
+      offset: 0
+  target:
+    populator: {}
+  # Writes the files as the app's own user, so they are readable by it and
+  # need no snapshot to exist first.
+  mover:
+    securityContext:
+      runAsUser: ${KOPIUR_PUID:=1000}
+      runAsGroup: ${KOPIUR_PGID:=1000}
+    podSecurityContext:
+      fsGroup: ${KOPIUR_PGID:=1000}
+      fsGroupChangePolicy: OnRootMismatch

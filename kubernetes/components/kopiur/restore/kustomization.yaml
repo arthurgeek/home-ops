@@ -1,0 +1,10 @@
+---
+# The app's PVC, populated from its latest kopia backup when it is first
+# created (empty if there is none). Pair with ../backup.
+# Vars: APP, KOPIUR_CLAIM (required); KOPIUR_CAPACITY, KOPIUR_STORAGECLASS,
+# KOPIUR_ACCESSMODES (optional).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./pvc.yaml
+  - ./restore.yaml

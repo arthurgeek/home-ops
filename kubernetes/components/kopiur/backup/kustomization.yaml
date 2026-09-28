@@ -1,0 +1,9 @@
+---
+# Hourly kopia backups of one PVC to the rustfs ClusterRepository.
+# Vars: APP, KOPIUR_CLAIM (required); KOPIUR_PUID, KOPIUR_PGID (owner of the
+# data, default 1000), KOPIUR_CACHE_CAPACITY (optional).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./snapshotpolicy.yaml
+  - ./snapshotschedule.yaml

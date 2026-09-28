@@ -1,7 +1,7 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: database
+namespace: kopiur-system
 
 components:
   - ../../components/sops
@@ -9,4 +9,4 @@ components:
 
 resources:
   - ./namespace.yaml
-  - ./obsidian-couchdb/ks.yaml
+  - ./kopiur/ks.yaml
