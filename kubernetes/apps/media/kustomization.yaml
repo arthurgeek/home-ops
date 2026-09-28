@@ -10,5 +10,6 @@ components:
 resources:
   - ./media-nfs.yaml
   - ./namespace.yaml
+  - ./maintainerr/ks.yaml
   - ./seerr/ks.yaml
   - ./tautulli/ks.yaml
