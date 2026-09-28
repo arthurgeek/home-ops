@@ -16,5 +16,5 @@ spec:
     name: flux-system
     namespace: flux-system
   targetNamespace: kube-system
-  # Apps claiming a GPU (plex) depend on the driver being ready.
+  # Apps claiming a GPU depend on the driver being ready.
   wait: true
