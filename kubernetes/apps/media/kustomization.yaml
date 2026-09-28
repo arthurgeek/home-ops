@@ -5,7 +5,9 @@ namespace: media
 
 components:
   - ../../components/sops
+  - ../../components/kopiur/secret
 
 resources:
   - ./media-nfs.yaml
   - ./namespace.yaml
+  - ./tautulli/ks.yaml

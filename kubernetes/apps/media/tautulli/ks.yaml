@@ -1,0 +1,31 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tautulli
+spec:
+  components:
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
+  dependsOn:
+    - name: kopiur-repository
+      namespace: kopiur-system
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/media/tautulli/app
+  postBuild:
+    substitute:
+      APP: tautulli
+      KOPIUR_CLAIM: tautulli
+      KOPIUR_CAPACITY: 2Gi
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: media
+  wait: false
