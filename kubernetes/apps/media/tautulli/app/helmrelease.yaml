@@ -13,12 +13,37 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+        initContainers:
+          # The scripts run by Tautulli need packages the image does not ship.
+          install-deps:
+            image:
+              repository: ghcr.io/home-operations/tautulli
+              tag: 2.18.1@sha256:2cc92abed174f89d4fa75ab98e39af0114f37829e9c675718b264cc80931c4f5
+            env:
+              HOME: /tmp
+              PIP_DISABLE_PIP_VERSION_CHECK: "1"
+            command:
+              - python3
+              - -m
+              - pip
+              - install
+              - --quiet
+              - --no-cache-dir
+              - --target=/pylib
+              - requests==2.34.2
+              - plexapi==4.18.3
+              - future==1.0.0
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
         containers:
           app:
             image:
               repository: ghcr.io/home-operations/tautulli
               tag: 2.18.1@sha256:2cc92abed174f89d4fa75ab98e39af0114f37829e9c675718b264cc80931c4f5
             env:
+              PYTHONPATH: /pylib
               TZ: America/Sao_Paulo
             probes:
               liveness: &probes
@@ -41,6 +66,28 @@ spec:
                 cpu: 10m
               limits:
                 memory: 512Mi
+          # Keeps a copy of the JBOPS scripts, which Tautulli runs from
+          # /add-ons/JBOPS.
+          jbops:
+            image:
+              repository: registry.k8s.io/git-sync/git-sync
+              tag: v4.7.1@sha256:c5e1976da735bf0b53979f079a07475d77174c51863cd084e928ff6074480717
+            env:
+              GITSYNC_REPO: https://github.com/blacktwin/JBOPS
+              GITSYNC_REF: master
+              GITSYNC_PERIOD: 24h
+              GITSYNC_ROOT: /add-ons
+              GITSYNC_LINK: JBOPS
+              HOME: /tmp
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 128Mi
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
@@ -69,3 +116,30 @@ spec:
         existingClaim: *app
       tmp:
         type: emptyDir
+      # Scripts kept in this repo; JBOPS ones are under /add-ons.
+      scripts:
+        type: configMap
+        name: tautulli-scripts
+        defaultMode: 0755
+        globalMounts:
+          - path: /scripts
+            readOnly: true
+      add-ons:
+        type: emptyDir
+        advancedMounts:
+          tautulli:
+            jbops:
+              - path: /add-ons
+            app:
+              - path: /add-ons
+                readOnly: true
+      # Kept apart from /add-ons, which git-sync clears.
+      pylib:
+        type: emptyDir
+        advancedMounts:
+          tautulli:
+            install-deps:
+              - path: /pylib
+            app:
+              - path: /pylib
+                readOnly: true
