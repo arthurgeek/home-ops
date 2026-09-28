@@ -11,5 +11,6 @@ resources:
   - ./media-nfs.yaml
   - ./namespace.yaml
   - ./maintainerr/ks.yaml
+  - ./plex-auto-languages/ks.yaml
   - ./seerr/ks.yaml
   - ./tautulli/ks.yaml
