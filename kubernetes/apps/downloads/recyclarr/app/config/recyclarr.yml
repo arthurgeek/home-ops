@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/recyclarr/recyclarr/master/schemas/config-schema.json
+# Quality profiles follow the TRaSH guides; each entry keeps the name it
+# already has in the app. Radarr's Kids profile is left to the app: its
+# Portuguese (Brazil) language cannot be set from here, and every sync
+# would reset it to the guide's.
+sonarr:
+  series:
+    base_url: !env_var SONARR_URL
+    api_key: !env_var SONARR_API_KEY
+    quality_definition:
+      type: series
+    quality_profiles:
+      # WEB 2160p, falling back to WEB 1080p.
+      - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7
+        name: HD
+        reset_unmatched_scores:
+          enabled: true
+
+radarr:
+  movies:
+    base_url: !env_var RADARR_URL
+    api_key: !env_var RADARR_API_KEY
+    quality_definition:
+      type: movie
+    quality_profiles:
+      # Remux 2160p, falling back to Bluray and WEB in 2160p and 1080p.
+      - trash_id: d1d310673359205736b4b84acd5ea8c8
+        name: HD
+        reset_unmatched_scores:
+          enabled: true
