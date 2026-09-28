@@ -5,28 +5,22 @@ metadata:
   name: prowlarr
 spec:
   components:
-    - ../../../../components/volsync
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
   dependsOn:
+    - name: kopiur-repository
+      namespace: kopiur-system
     - name: onepassword-store
       namespace: external-secrets
     - name: rook-ceph-cluster
       namespace: rook-ceph
-    - name: rustfs
-      namespace: storage
-    - name: volsync
-      namespace: volsync-system
   interval: 1h
   path: ./kubernetes/apps/downloads/prowlarr/app
   postBuild:
     substitute:
       APP: prowlarr
-      VOLSYNC_CLAIM: prowlarr
-      VOLSYNC_CAPACITY: 2Gi
-      # The backups were taken as 1030:100 (the old Synology IDs); movers run
-      # as that pair so restic can restore ownership without extra
-      # capabilities. The app itself runs as 1000 with fsGroup 1000.
-      APP_UID: "1030"
-      APP_GID: "100"
+      KOPIUR_CLAIM: prowlarr
+      KOPIUR_CAPACITY: 2Gi
     substituteFrom:
       - name: cluster-secrets
         kind: Secret

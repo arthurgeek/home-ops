@@ -20,7 +20,12 @@ kind: Kustomization
 metadata:
   name: pocket-id-instance
 spec:
+  # The operator creates the claim; only backups come from kopiur.
+  components:
+    - ../../../../components/kopiur/backup
   dependsOn:
+    - name: kopiur-repository
+      namespace: kopiur-system
     - name: onepassword-store
       namespace: external-secrets
     - name: pocket-id-operator
@@ -29,6 +34,13 @@ spec:
   interval: 1h
   path: ./kubernetes/apps/security/pocket-id/instance
   postBuild:
+    substitute:
+      APP: pocket-id
+      KOPIUR_CLAIM: pocket-id-data
+      # PocketID writes its data as 65534 with the pod's fsGroup (65532);
+      # its uploads directory is owner-only.
+      KOPIUR_PUID: "65534"
+      KOPIUR_PGID: "65532"
     substituteFrom:
       - name: cluster-secrets
         kind: Secret
