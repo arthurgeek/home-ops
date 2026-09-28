@@ -16,5 +16,5 @@ spec:
     name: flux-system
     namespace: flux-system
   targetNamespace: kube-system
-  # volsync needs the VolumeSnapshot CRDs this installs.
+  # kopiur snapshots volumes with the VolumeSnapshot CRDs this installs.
   wait: true
