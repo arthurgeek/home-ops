@@ -67,8 +67,8 @@ spec:
                 nodeAffinityType:
                   - requiredDuringSchedulingIgnoredDuringExecution
                   - preferredDuringSchedulingIgnoredDuringExecution
-                # Preferred affinity only moves Plex (back to its GPU node);
-                # other charts' soft preferences stay as scheduled.
+                # Preferred affinity only moves media apps back to their GPU
+                # node; other charts' soft preferences stay as scheduled.
                 namespaces:
                   include:
                     - media
