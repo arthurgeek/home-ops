@@ -1,0 +1,37 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: wan-probe
+spec:
+  groups:
+    - name: wan-quality
+      rules:
+        # The numbers the WAN dashboard and the automation read.
+        - record: wan:loss_ratio:avg5m
+          expr: avg by (wan) (avg_over_time(wan_probe_loss_ratio[5m]))
+        - record: wan:rtt_p95_seconds:avg5m
+          expr: avg by (wan) (avg_over_time(wan_probe_rtt_p95_seconds[5m]))
+        - record: wan:jitter_seconds:avg5m
+          expr: avg by (wan) (avg_over_time(wan_probe_jitter_seconds[5m]))
+        - alert: WanBurstLoss
+          annotations:
+            summary: "{{ $labels.wan }} loses {{ $value | humanizePercentage }} of call-sized packets."
+          expr: wan:loss_ratio:avg5m > 0.03
+          for: 5m
+          labels:
+            severity: warning
+        - alert: WanJitter
+          annotations:
+            summary: "{{ $labels.wan }} jitter is {{ $value | humanizeDuration }}, which breaks calls."
+          expr: wan:jitter_seconds:avg5m > 0.02
+          for: 10m
+          labels:
+            severity: warning
+        - alert: WanProbeStale
+          annotations:
+            summary: "The WAN probe has not reported for {{ $labels.wan }} in five minutes."
+          expr: time() - max by (wan) (wan_probe_last_run_timestamp_seconds) > 300
+          for: 5m
+          labels:
+            severity: warning

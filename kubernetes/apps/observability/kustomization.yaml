@@ -12,3 +12,4 @@ resources:
   - ./grafana-operator/ks.yaml
   - ./blackbox-exporter/ks.yaml
   - ./kube-prometheus-stack/ks.yaml
+  - ./wan-probe/ks.yaml
