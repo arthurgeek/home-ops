@@ -1,0 +1,47 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kopiur
+spec:
+  groups:
+    - name: kopiur-backups
+      rules:
+        # Backups run hourly, so a policy without a success in four hours has
+        # missed several runs.
+        - alert: KopiurBackupStale
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.policy }} has had no successful backup for {{ $value | humanizeDuration }}."
+          expr: time() - kopiur_policy_last_backup_success_timestamp_seconds > 4 * 3600
+          for: 10m
+          labels:
+            severity: critical
+        - alert: KopiurBackupFailing
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.name }} backups have failed {{ $value }} times in a row."
+          expr: kopiur_snapshot_consecutive_failures > 2
+          for: 5m
+          labels:
+            severity: critical
+        - alert: KopiurRepositoryNotReady
+          annotations:
+            summary: "The backup repository {{ $labels.name }} is {{ $labels.phase }}, so no backup can complete."
+          expr: kopiur_resource_phase{kind="ClusterRepository", phase!="Ready"} == 1
+          for: 10m
+          labels:
+            severity: critical
+        - alert: KopiurRepositoryBackendFailing
+          annotations:
+            summary: "The backup storage behind {{ $labels.name }} has failed {{ $value }} checks in a row."
+          expr: kopiur_repository_consecutive_backend_failures > 0
+          for: 10m
+          labels:
+            severity: critical
+        # Without a leader nothing schedules or runs backups.
+        - alert: KopiurControllerDown
+          annotations:
+            summary: "No backup controller is leading, so no backups are being scheduled."
+          expr: absent(kopiur_leader_is_leader == 1)
+          for: 10m
+          labels:
+            severity: critical
