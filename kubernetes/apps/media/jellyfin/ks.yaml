@@ -1,0 +1,33 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jellyfin
+spec:
+  components:
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
+  dependsOn:
+    - name: intel-gpu-resource-driver
+      namespace: kube-system
+    - name: kopiur-repository
+      namespace: kopiur-system
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/media/jellyfin/app
+  postBuild:
+    substitute:
+      APP: jellyfin
+      KOPIUR_CLAIM: jellyfin
+      KOPIUR_CAPACITY: 10Gi
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: media
+  wait: false
