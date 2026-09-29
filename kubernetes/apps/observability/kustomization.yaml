@@ -15,3 +15,4 @@ resources:
   - ./kube-prometheus-stack/ks.yaml
   - ./wan-probe/ks.yaml
   - ./unpoller/ks.yaml
+  - ./smartctl-exporter/ks.yaml
