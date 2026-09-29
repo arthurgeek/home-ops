@@ -306,6 +306,103 @@
         "type": "prometheus",
         "uid": "prometheus"
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Download per WAN",
+      "description": "Traffic the gateway receives on each WAN port, averaged over 2 minutes. Read it next to loss, jitter and round-trip time to see whether quality drops when a link is busy.",
+      "id": 7,
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["mean", "max", "lastNotNull"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (wan) (label_replace(label_replace(rate(unpoller_device_wan_receive_bytes_total{port=~\"eth1|eth2\"}[2m]) * 8, \"wan\", \"internet-1\", \"port\", \"eth1\"), \"wan\", \"internet-2\", \"port\", \"eth2\"))",
+          "legendFormat": "{{wan}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Upload per WAN",
+      "description": "Traffic the gateway sends on each WAN port, averaged over 2 minutes.",
+      "id": 8,
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": ["mean", "max", "lastNotNull"]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (wan) (label_replace(label_replace(rate(unpoller_device_wan_transmit_bytes_total{port=~\"eth1|eth2\"}[2m]) * 8, \"wan\", \"internet-1\", \"port\", \"eth1\"), \"wan\", \"internet-2\", \"port\", \"eth2\"))",
+          "legendFormat": "{{wan}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "graphTooltip": 1
 }
