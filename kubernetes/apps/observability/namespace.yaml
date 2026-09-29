@@ -8,3 +8,5 @@ metadata:
   labels:
     # The node exporter needs the host's network, PID namespace and files.
     pod-security.kubernetes.io/enforce: privileged
+    # Lets the GPU exporter view the GPUs without claiming them.
+    resource.kubernetes.io/admin-access: "true"

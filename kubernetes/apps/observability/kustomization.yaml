@@ -16,3 +16,4 @@ resources:
   - ./wan-probe/ks.yaml
   - ./unpoller/ks.yaml
   - ./smartctl-exporter/ks.yaml
+  - ./drm-exporter/ks.yaml

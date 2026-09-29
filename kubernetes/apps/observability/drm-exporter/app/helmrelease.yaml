@@ -1,0 +1,34 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app drm-exporter
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: drm-exporter
+  interval: 1h
+  values:
+    fullnameOverride: *app
+    # Read-only view of the node's GPU through the device driver; it does
+    # not take the GPU away from the media apps.
+    dra:
+      enabled: true
+      deviceClassName: gpu.intel.com
+    # Talos has no msr module, so the raw I/O capability and /dev/cpu are
+    # left out; engine load, memory, frequency and power come from the
+    # perf interface.
+    securityContext:
+      capabilities:
+        add:
+          - PERFMON
+    monitoring:
+      serviceMonitor:
+        enabled: true
+      dashboards:
+        enabled: true
+        grafanaOperator:
+          enabled: true
+          folder: Nodes
+          matchLabels:
+            dashboards: grafana
