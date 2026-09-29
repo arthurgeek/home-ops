@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    # The node exporter needs the host's network, PID namespace and files.
+    pod-security.kubernetes.io/enforce: privileged

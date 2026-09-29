@@ -1,0 +1,24 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana-operator
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: grafana-operator
+  interval: 1h
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    # Dashboards and Grafana instances are found in every namespace.
+    watchNamespaces: ""
+    serviceMonitor:
+      enabled: true
+    resources:
+      requests:
+        cpu: 10m
+      limits:
+        memory: 256Mi
