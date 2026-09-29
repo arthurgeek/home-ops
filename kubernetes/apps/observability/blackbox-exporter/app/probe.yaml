@@ -1,0 +1,38 @@
+---
+# Each pair of addresses is sent out one internet connection only by a UniFi
+# Traffic Route, so probing a pair measures that provider's own path.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: wan-internet-1
+spec:
+  interval: 10s
+  scrapeTimeout: 8s
+  module: icmp_1200
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - 9.9.9.10
+        - 9.9.9.11
+      labels:
+        wan: internet-1
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: wan-internet-2
+spec:
+  interval: 10s
+  scrapeTimeout: 8s
+  module: icmp_1200
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - 149.112.112.10
+        - 149.112.112.11
+      labels:
+        wan: internet-2

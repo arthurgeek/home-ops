@@ -1,0 +1,30 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: wan
+spec:
+  groups:
+    - name: wan
+      rules:
+        - alert: WanPacketLoss
+          annotations:
+            summary: "{{ $labels.wan }} is losing {{ $value | humanizePercentage }} of its probes."
+          expr: (1 - avg by (wan) (avg_over_time(probe_success{wan!=""}[5m]))) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+        - alert: WanDown
+          annotations:
+            summary: "{{ $labels.wan }} answers almost none of its probes."
+          expr: (1 - avg by (wan) (avg_over_time(probe_success{wan!=""}[3m]))) > 0.8
+          for: 3m
+          labels:
+            severity: critical
+        - alert: WanHighLatency
+          annotations:
+            summary: "{{ $labels.wan }} round trips are slow: {{ $value | humanizeDuration }} at the 95th percentile."
+          expr: quantile_over_time(0.95, probe_icmp_duration_seconds{phase="rtt", wan!=""}[10m]) > 0.06
+          for: 10m
+          labels:
+            severity: warning

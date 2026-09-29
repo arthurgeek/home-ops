@@ -10,4 +10,5 @@ resources:
   - ./namespace.yaml
   - ./gateway-oidc/ks.yaml
   - ./grafana-operator/ks.yaml
+  - ./blackbox-exporter/ks.yaml
   - ./kube-prometheus-stack/ks.yaml
