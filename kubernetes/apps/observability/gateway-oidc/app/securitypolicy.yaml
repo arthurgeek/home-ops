@@ -1,0 +1,21 @@
+---
+# PocketID login in front of every route in this namespace labeled
+# oidc: pocket-id.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: pocket-id
+spec:
+  targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      matchLabels:
+        oidc: pocket-id
+  oidc:
+    provider:
+      issuer: https://id.${SECRET_DOMAIN}
+    clientID: envoy
+    clientSecret:
+      name: envoy-oidc
+      namespace: network
+    logoutPath: /oauth2/logout
