@@ -1,0 +1,30 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kometa
+spec:
+  groups:
+    - name: kometa
+      rules:
+        - alert: KometaRunFailed
+          annotations:
+            summary: "Kometa run {{ $labels.job_name }} failed. Its logs show why."
+          expr: kube_job_status_failed{namespace="media", job_name=~"kometa-.*"} > 0
+          for: 1m
+          labels:
+            severity: warning
+        - alert: KometaNotRunRecently
+          annotations:
+            summary: "Kometa has not completed a run in {{ $value | humanizeDuration }}; it is scheduled daily."
+          expr: time() - kube_cronjob_status_last_successful_time{namespace="media", cronjob="kometa"} > 48 * 3600
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KometaRunStuck
+          annotations:
+            summary: "Kometa run {{ $labels.job_name }} has been running for over three hours."
+          expr: kube_job_status_active{namespace="media", job_name=~"kometa-.*"} > 0
+          for: 3h
+          labels:
+            severity: warning
