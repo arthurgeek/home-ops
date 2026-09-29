@@ -1,0 +1,33 @@
+---
+# Grafana maps this group to its Admin role; everyone else who could sign in
+# would be a Viewer.
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUserGroup
+metadata:
+  name: grafana-admins
+spec:
+  name: grafana-admins
+  friendlyName: Grafana Admins
+  users:
+    userRefs:
+      - name: owner
+        namespace: security
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDOIDCClient
+metadata:
+  name: grafana
+spec:
+  name: Grafana
+  clientID: grafana
+  clientSecretRef:
+    name: grafana-secret
+    key: oidc-client-secret
+  callbackUrls:
+    - https://grafana.${SECRET_DOMAIN}/login/generic_oauth
+  launchUrl: https://grafana.${SECRET_DOMAIN}
+  pkceEnabled: true
+  allowedUserGroups:
+    - name: grafana-admins
+  secret:
+    enabled: false

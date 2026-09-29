@@ -1,0 +1,64 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  labels:
+    dashboards: grafana
+spec:
+  config:
+    analytics:
+      check_for_updates: "false"
+      check_for_plugin_updates: "false"
+      reporting_enabled: "false"
+    log:
+      mode: console
+    plugins:
+      plugin_admin_enabled: "false"
+    server:
+      root_url: https://grafana.${SECRET_DOMAIN}
+    auth:
+      oauth_auto_login: "true"
+    auth.generic_oauth:
+      enabled: "true"
+      name: PocketID
+      client_id: grafana
+      client_secret: $__env{OIDC_CLIENT_SECRET}
+      scopes: openid email profile groups
+      auth_url: https://id.${SECRET_DOMAIN}/authorize
+      token_url: https://id.${SECRET_DOMAIN}/api/oidc/token
+      api_url: https://id.${SECRET_DOMAIN}/api/oidc/userinfo
+      use_pkce: "true"
+      login_attribute_path: preferred_username
+      email_attribute_path: email
+      name_attribute_path: name
+      role_attribute_path: "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'"
+      allow_assign_grafana_admin: "true"
+      allow_sign_up: "true"
+  persistentVolumeClaim:
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ceph-block
+      resources:
+        requests:
+          storage: 1Gi
+  deployment:
+    spec:
+      template:
+        spec:
+          securityContext:
+            fsGroup: 472
+            fsGroupChangePolicy: OnRootMismatch
+          containers:
+            - name: grafana
+              env:
+                - name: OIDC_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-secret
+                      key: oidc-client-secret
+              resources:
+                requests:
+                  cpu: 50m
+                limits:
+                  memory: 512Mi
