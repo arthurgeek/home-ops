@@ -1,0 +1,25 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kopia-truenas
+spec:
+  groups:
+    - name: kopia-truenas
+      rules:
+        # The scheduled snapshots run inside this server, so nothing is
+        # backed up while it is down.
+        - alert: KopiaTruenasDown
+          annotations:
+            summary: "The NAS backup server has not answered for ten minutes, so no NAS backup is running."
+          expr: up{job="kopia-truenas"} == 0
+          for: 10m
+          labels:
+            severity: critical
+        - alert: KopiaTruenasStorageErrors
+          annotations:
+            summary: "The NAS backup server hit {{ $value | humanize }} storage errors in {{ $labels.method }} calls in the last 15 minutes."
+          expr: sum by (method) (increase(kopia_blob_errors_total{job="kopia-truenas"}[15m])) > 0
+          for: 5m
+          labels:
+            severity: critical

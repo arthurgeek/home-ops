@@ -1,0 +1,19 @@
+---
+# The Kopia server on the NAS, which backs up the NAS shares.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: kopia-truenas
+spec:
+  staticConfigs:
+    - targets:
+        - 10.10.5.10:51516
+  metricsPath: /metrics
+  scrapeInterval: 30s
+  relabelings:
+    - action: replace
+      targetLabel: job
+      replacement: kopia-truenas
+    - action: replace
+      targetLabel: instance
+      replacement: truenas

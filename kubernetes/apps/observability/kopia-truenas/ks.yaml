@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kopia-truenas
+spec:
+  dependsOn:
+    - name: kube-prometheus-stack
+  interval: 1h
+  path: ./kubernetes/apps/observability/kopia-truenas/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: observability
+  wait: false
