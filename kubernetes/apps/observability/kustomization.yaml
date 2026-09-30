@@ -18,3 +18,4 @@ resources:
   - ./smartctl-exporter/ks.yaml
   - ./drm-exporter/ks.yaml
   - ./kopia-truenas/ks.yaml
+  - ./kopia-reports/ks.yaml

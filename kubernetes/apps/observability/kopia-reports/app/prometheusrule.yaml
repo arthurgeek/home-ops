@@ -1,0 +1,32 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kopia-reports
+spec:
+  groups:
+    - name: kopia-reports
+      rules:
+        # The status stays until the folder's next report, so the alert lasts
+        # until a snapshot of it completes.
+        - alert: KopiaSnapshotFailed
+          annotations:
+            summary: "The NAS backup of {{ $labels.source }} ended {{ $labels.status }}. The Kopia UI shows why."
+          expr: kopia_report_status{status=~"fatal|incomplete"} == 1
+          for: 1m
+          labels:
+            severity: critical
+        - alert: KopiaSnapshotWarnings
+          annotations:
+            summary: "The NAS backup of {{ $labels.source }} finished with warnings; some files were skipped."
+          expr: kopia_report_status{status="warnings"} == 1
+          for: 1m
+          labels:
+            severity: warning
+        - alert: KopiaReportsDown
+          annotations:
+            summary: "The receiver for NAS backup reports has not answered for ten minutes, so failures would go unnoticed."
+          expr: up{job="kopia-reports"} == 0
+          for: 10m
+          labels:
+            severity: warning
