@@ -1,0 +1,94 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app tailscale
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: tailscale
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        # Two routers on different nodes advertise the same network, so the
+        # tailnet keeps working through one node's outage.
+        replicas: 2
+        strategy: RollingUpdate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/tailscale/tailscale
+              tag: v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+            env:
+              NO_AUTOUPDATE: true
+              TZ: America/Sao_Paulo
+              TS_USERSPACE: true
+              TS_STATE_DIR: /tmp
+              TS_SOCKET: /tmp/tailscaled.sock
+              # State stays in the pod; the ephemeral node is registered anew.
+              TS_KUBE_SECRET: ""
+              TS_ACCEPT_DNS: false
+              TS_ROUTES: 10.10.5.0/24
+              TS_EXTRA_ARGS: --advertise-exit-node
+              TS_ENABLE_HEALTH_CHECK: true
+              TS_LOCAL_ADDR_PORT: 0.0.0.0:9002
+              TS_HOSTNAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+            envFrom:
+              - secretRef:
+                  name: tailscale-secret
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 9002
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: *app
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    persistence:
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      cache:
+        type: emptyDir
+        globalMounts:
+          - path: /.cache
