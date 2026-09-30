@@ -19,3 +19,4 @@ resources:
   - ./drm-exporter/ks.yaml
   - ./kopia-truenas/ks.yaml
   - ./kopia-reports/ks.yaml
+  - ./truenas/ks.yaml

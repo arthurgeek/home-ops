@@ -1,0 +1,53 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: truenas
+spec:
+  groups:
+    - name: truenas
+      rules:
+        - alert: TruenasDown
+          annotations:
+            summary: "The NAS has not answered for five minutes. Backups and every app that uses its storage are affected."
+          expr: up{job="node-exporter", instance="truenas"} == 0
+          for: 5m
+          labels:
+            severity: critical
+        - alert: TruenasPoolNotOnline
+          annotations:
+            summary: "The NAS pool {{ $labels.zpool }} is {{ $labels.state }}."
+          expr: node_zfs_zpool_state{instance="truenas", state!="online"} == 1
+          for: 5m
+          labels:
+            severity: critical
+        # bulk holds 12 TB: 80% used leaves 2.4 TB, 90% leaves 1.2 TB.
+        - alert: TruenasBulkPoolFilling
+          annotations:
+            summary: "The bulk pool has {{ $value | humanize1024 }}B free and is about 80% full."
+          expr: node_filesystem_avail_bytes{instance="truenas", mountpoint="/mnt/bulk"} < 2.4e12
+          for: 30m
+          labels:
+            severity: warning
+        - alert: TruenasBulkPoolAlmostFull
+          annotations:
+            summary: "The bulk pool has {{ $value | humanize1024 }}B free and is about 90% full."
+          expr: node_filesystem_avail_bytes{instance="truenas", mountpoint="/mnt/bulk"} < 1.2e12
+          for: 30m
+          labels:
+            severity: critical
+        # fast holds 493 GB: 80% used leaves about 100 GB, 90% leaves about 50 GB.
+        - alert: TruenasFastPoolFilling
+          annotations:
+            summary: "The fast pool has {{ $value | humanize1024 }}B free and is about 80% full."
+          expr: node_filesystem_avail_bytes{instance="truenas", mountpoint="/mnt/fast"} < 100e9
+          for: 30m
+          labels:
+            severity: warning
+        - alert: TruenasFastPoolAlmostFull
+          annotations:
+            summary: "The fast pool has {{ $value | humanize1024 }}B free and is about 90% full."
+          expr: node_filesystem_avail_bytes{instance="truenas", mountpoint="/mnt/fast"} < 50e9
+          for: 30m
+          labels:
+            severity: critical
