@@ -94,6 +94,13 @@ spec:
       app:
         labels:
           oidc: pocket-id
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Downloads
+          gethomepage.dev/name: qBittorrent
+          gethomepage.dev/icon: qbittorrent.png
+          gethomepage.dev/description: Torrent client
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=qbittorrent
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-internal

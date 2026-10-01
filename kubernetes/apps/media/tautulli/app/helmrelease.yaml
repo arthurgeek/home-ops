@@ -108,6 +108,13 @@ spec:
       app:
         labels:
           oidc: pocket-id
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Tautulli
+          gethomepage.dev/icon: tautulli.png
+          gethomepage.dev/description: Plex Monitoring & Stats
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=tautulli
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-internal

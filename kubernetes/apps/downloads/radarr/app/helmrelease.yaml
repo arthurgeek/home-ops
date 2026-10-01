@@ -82,6 +82,13 @@ spec:
       app:
         labels:
           oidc: pocket-id
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Downloads
+          gethomepage.dev/name: Radarr
+          gethomepage.dev/icon: radarr.png
+          gethomepage.dev/description: Movies
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=radarr
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-internal

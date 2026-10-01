@@ -91,6 +91,13 @@ spec:
     route:
       # The UI uses native PocketID OIDC directly in the app.
       app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Downloads
+          gethomepage.dev/name: autobrr
+          gethomepage.dev/icon: autobrr.png
+          gethomepage.dev/description: Torrent automation & IRC filters
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=autobrr
         hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
         parentRefs:
           - name: envoy-internal
