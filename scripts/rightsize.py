@@ -28,16 +28,6 @@ import sys
 from pathlib import Path
 from ruamel.yaml import YAML
 
-# Namespaces excluded from automated right-sizing (core infrastructure)
-EXCLUDED_NAMESPACES = {
-    "actions-runner-system",
-    "kube-system",
-    "rook-ceph",
-    "openebs-system",
-    "security",
-    "system-upgrade",
-}
-
 # Standard memory tiers in MiB for safe upward rounding
 MEMORY_TIERS_MIB = [
     64, 96, 128, 160, 192, 256, 384, 512, 768,
@@ -299,6 +289,87 @@ def get_cluster_headroom() -> dict:
     }
 
 
+def get_workload_history_days() -> dict[tuple[str, str], float]:
+    """Calculate the observation history age in days for all workloads in the cluster.
+
+    Combines workload creation timestamp and Prometheus cAdvisor container metric duration.
+    """
+    import datetime
+    import time
+    import urllib.parse
+    import urllib.request
+
+    ages: dict[tuple[str, str], float] = {}
+
+    # 1. Fetch workload creation timestamps via Kubernetes API
+    try:
+        proc = subprocess.run(
+            ["kubectl", "get", "deployments,statefulsets,daemonsets", "-A", "-o", "json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        wl_data = json.loads(proc.stdout)
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        for item in wl_data.get("items", []):
+            ns = item["metadata"]["namespace"]
+            name = item["metadata"]["name"]
+            created_str = item["metadata"]["creationTimestamp"]
+            created = datetime.datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+            days = (now_utc - created).total_seconds() / 86400.0
+            ages[(ns, name)] = days
+    except Exception as e:
+        print(f"Warning: could not fetch workload creation timestamps: {e}", file=sys.stderr)
+
+    # 2. Query Prometheus container start time history (if available)
+    q = 'min by (namespace, pod) (min_over_time(container_start_time_seconds{container!="",container!="POD"}[30d]))'
+    encoded_q = urllib.parse.quote(q)
+    endpoints = [
+        f"http://kube-prometheus-stack-prometheus.observability:9090/api/v1/query?query={encoded_q}",
+    ]
+    prom_data = None
+    for ep in endpoints:
+        try:
+            req = urllib.request.Request(ep, headers={"User-Agent": "rightsize.py"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                prom_data = json.loads(resp.read().decode())
+                break
+        except Exception:
+            pass
+
+    if not prom_data:
+        raw_path = (
+            f"/api/v1/namespaces/observability/services/kube-prometheus-stack-prometheus:9090/proxy/api/v1/query?query={encoded_q}"
+        )
+        try:
+            proc = subprocess.run(["kubectl", "get", "--raw", raw_path], capture_output=True, text=True)
+            if proc.returncode == 0 and proc.stdout:
+                prom_data = json.loads(proc.stdout)
+        except Exception:
+            pass
+
+    if prom_data and prom_data.get("status") == "success":
+        now = time.time()
+        for r in prom_data.get("data", {}).get("result", []):
+            ns = r.get("metric", {}).get("namespace")
+            pod = r.get("metric", {}).get("pod")
+            val = r.get("value", [0, 0])
+            if not ns or not pod:
+                continue
+            try:
+                start_ts = float(val[1])
+                days = (now - start_ts) / 86400.0
+                parts = pod.rsplit("-", 2)
+                wl = parts[0] if len(parts) >= 3 else pod.rsplit("-", 1)[0]
+                key = (ns, wl)
+                if key not in ages or days > ages[key]:
+                    ages[key] = days
+            except (ValueError, IndexError):
+                continue
+
+    return ages
+
+
 def build_markdown_report(proposals: list[dict], headroom: dict = None) -> str:
     net_cpu_delta = sum(p["new_cpu_m"] - p["curr_cpu_m"] for p in proposals if p["cpu_trigger"])
     net_limit_delta = sum(p["new_limit_mem_mib"] - p["curr_limit_mem_mib"] for p in proposals if p["limit_trigger"])
@@ -330,19 +401,21 @@ def build_markdown_report(proposals: list[dict], headroom: dict = None) -> str:
 
     lines.extend([
         "**Safety Guardrails Applied**:",
+        "* **Observation Window Gate**: Only workloads with &ge; 8 days of historical telemetry are eligible for automated PRs.",
         "* **Symmetric Ratchet**: Scale-ups are clamped to a max 2-tier step (or 2x); downgrades are clamped to a max 20% reduction per step.",
         "* **Cluster Capacity Gatekeeper**: Validates aggregate resource requests against active node allocatable headroom.",
         "* **No CPU Limits**: Workloads retain full burstability up to node capacity without kernel CFS throttling.",
         "* **Memory Limits Right-Sized**: High overcommit ceilings are brought down to sane multiples (1.5x-2x request) to eliminate node overcommit alerts.",
         "",
-        "| Namespace | Workload | Container | CPU Request | Memory Request | Memory Limit | Action |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        "| Namespace | Workload | Container | CPU Request | Memory Request | Memory Limit | Observation | Action |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
     ])
     for p in proposals:
         cpu_str = f"`{p['curr_cpu']}` &rarr; **`{p['new_cpu']}`**" if p["cpu_trigger"] else f"`{p['curr_cpu']}`"
         mem_str = f"`{p['curr_mem']}` &rarr; **`{p['new_mem']}`**" if p["mem_trigger"] else f"`{p['curr_mem']}`"
         limit_str = f"`{p['curr_limit_mem']}` &rarr; **`{p['new_limit_mem']}`**" if p["limit_trigger"] else f"`{p['curr_limit_mem']}`"
-        lines.append(f"| `{p['namespace']}` | **{p['workload']}** | `{p['container']}` | {cpu_str} | {mem_str} | {limit_str} | {p['action_note']} |")
+        hist_str = f"`{p.get('data_age_days', 0.0):.1f}d`"
+        lines.append(f"| `{p['namespace']}` | **{p['workload']}** | `{p['container']}` | {cpu_str} | {mem_str} | {limit_str} | {hist_str} | {p['action_note']} |")
     lines.append("")
     lines.append("> [!NOTE]")
     lines.append("> Workloads scale gradually over observation cycles to guarantee stability.")
@@ -361,6 +434,9 @@ def main():
     parser.add_argument("--max-scaleup-tiers", type=int, default=2, help="Maximum tier jumps per step on scale-up (default: 2)")
     parser.add_argument("--max-scaleup-factor", type=float, default=2.0, help="Maximum multiplier per step on scale-up (default: 2.0)")
     parser.add_argument("--cluster-budget-ratio", type=float, default=0.7, help="Maximum fraction of cluster free CPU headroom allowed for net increases (default: 0.7)")
+    parser.add_argument("--min-history-days", type=float, default=None, help="Minimum days of historical data required before considering a workload (defaults to 8.0 when --create-pr is specified)")
+    parser.add_argument("--skip-sensitive", action="store_true", default=True, help="Skip sensitive/storage infrastructure like rook-ceph (default: True)")
+    parser.add_argument("--no-skip-sensitive", dest="skip_sensitive", action="store_false", help="Do not skip sensitive workloads")
     parser.add_argument("--push", action="store_true", help="Push branch to origin and create/update PR via gh CLI")
     args = parser.parse_args()
 
@@ -381,10 +457,11 @@ def main():
 
     proposals = []
     headroom = get_cluster_headroom()
+    workload_history = get_workload_history_days()
 
     for item in vpa_data.get("items", []):
         ns = item["metadata"]["namespace"]
-        if ns in EXCLUDED_NAMESPACES:
+        if args.skip_sensitive and ns == "rook-ceph":
             continue
         if args.namespace and ns != args.namespace:
             continue
@@ -493,11 +570,18 @@ def main():
             if limit_trigger:
                 action_notes.append("Trim overcommit limit")
 
+            workload_age = workload_history.get((ns, workload_name), 0.0)
+            if workload_age == 0.0:
+                for (k_ns, k_wl), k_age in workload_history.items():
+                    if k_ns == ns and (workload_name.startswith(k_wl) or k_wl.startswith(workload_name)):
+                        workload_age = max(workload_age, k_age)
+
             if cpu_trigger or mem_trigger or limit_trigger:
                 proposals.append({
                     "namespace": ns,
                     "workload": workload_name,
                     "container": cname,
+                    "data_age_days": workload_age,
                     "file": hr_file,
                     "hr_yaml": hr_yaml,
                     "res_block": res_block,
@@ -521,13 +605,21 @@ def main():
 
     if not proposals:
         print("All analyzed workloads are currently within optimal resource deadbands! No changes needed.")
-        return
+        return 0
+
+    min_history_days = args.min_history_days
+    if min_history_days is None:
+        min_history_days = 8.0 if args.create_pr else 0.0
+
+    actionable_proposals = [p for p in proposals if p["data_age_days"] >= min_history_days]
+    deferred_proposals = [p for p in proposals if p["data_age_days"] < min_history_days]
 
     net_cpu_delta = sum(p["new_cpu_m"] - p["curr_cpu_m"] for p in proposals if p["cpu_trigger"])
     net_limit_delta = sum(p["new_limit_mem_mib"] - p["curr_limit_mem_mib"] for p in proposals if p["limit_trigger"])
 
     if args.markdown:
-        print(build_markdown_report(proposals, headroom))
+        target_proposals = actionable_proposals if args.create_pr else proposals
+        print(build_markdown_report(target_proposals, headroom))
         return
 
     if headroom:
@@ -542,19 +634,35 @@ def main():
             print(f"\n⚠️ WARNING: Proposed net CPU increase (+{net_cpu_delta:.0f}m) exceeds {args.cluster_budget_ratio*100:.0f}% of cluster headroom ({headroom['free_cpu_m']:.0f}m)!\n")
 
     print(f"\nFound {len(proposals)} workload(s) with significant resource drift (ratchet guardrails active):\n")
-    header = f"{'NAMESPACE':<14} {'WORKLOAD':<22} {'CPU (CURR -> NEW)':<22} {'MEM REQ (CURR -> NEW)':<24} {'MEM LIMIT (CURR -> NEW)':<24} {'ACTION':<24}"
+    header = f"{'NAMESPACE':<14} {'WORKLOAD':<22} {'CPU (CURR -> NEW)':<22} {'MEM REQ (CURR -> NEW)':<24} {'MEM LIMIT (CURR -> NEW)':<24} {'HISTORY':<10} {'ACTION':<24}"
     print(header)
     print("=" * len(header))
-
-    files_to_save = {}
 
     for p in proposals:
         cpu_str = f"{p['curr_cpu']} -> {p['new_cpu']}" + (" *" if p["cpu_trigger"] else "")
         mem_str = f"{p['curr_mem']} -> {p['new_mem']}" + (" *" if p["mem_trigger"] else "")
         limit_str = f"{p['curr_limit_mem']} -> {p['new_limit_mem']}" + (" *" if p["limit_trigger"] else "")
-        print(f"{p['namespace']:<14} {p['workload']:<22} {cpu_str:<22} {mem_str:<24} {limit_str:<24} {p['action_note']:<24}")
+        hist_str = f"{p['data_age_days']:.1f}d"
+        print(f"{p['namespace']:<14} {p['workload']:<22} {cpu_str:<22} {mem_str:<24} {limit_str:<24} {hist_str:<10} {p['action_note']:<24}")
 
-        if args.apply or args.create_pr:
+    if deferred_proposals and min_history_days > 0:
+        print(f"\n⏳ Deferred {len(deferred_proposals)} workload(s) with < {min_history_days:.1f}d observation history:")
+        for p in deferred_proposals:
+            print(f"  - {p['namespace']}/{p['workload']}: {p['data_age_days']:.1f}d available (< {min_history_days:.1f}d threshold)")
+
+    target_proposals = actionable_proposals if (args.create_pr or min_history_days > 0) else proposals
+
+    if args.create_pr and not target_proposals:
+        print(f"\n✨ PR creation deferred: no workloads currently meet the {min_history_days:.1f}-day observation threshold.")
+        return 0
+
+    if (args.apply or args.create_pr) and not target_proposals:
+        print("\n✨ All eligible workloads are currently right-sized within target thresholds. Nothing to do!")
+        return 0
+
+    files_to_save = {}
+    if args.apply or args.create_pr:
+        for p in target_proposals:
             res = p["res_block"]
             if "requests" not in res or not isinstance(res["requests"], dict):
                 res["requests"] = {}
@@ -568,11 +676,8 @@ def main():
             if p["limit_trigger"]:
                 res["limits"]["memory"] = p["new_limit_mem"]
 
-    if not proposals:
-        print("\n✨ All workloads are currently right-sized within target thresholds. Nothing to do!")
-        return 0
+            files_to_save[p["file"]] = p["hr_yaml"]
 
-    if args.apply or args.create_pr:
         print(f"\nWriting updates to {len(files_to_save)} HelmRelease file(s)...")
         for fpath, ydata in files_to_save.items():
             with open(fpath, "w") as f:
@@ -589,7 +694,7 @@ def main():
             commit_msg = "chore: right-size workload resource requests and limits"
             subprocess.run(["git", "commit", "-m", commit_msg], check=True)
 
-            md_report = build_markdown_report(proposals, headroom)
+            md_report = build_markdown_report(target_proposals, headroom)
             report_file = workspace_root / ".rightsize-pr-body.md"
             report_file.write_text(md_report)
 
