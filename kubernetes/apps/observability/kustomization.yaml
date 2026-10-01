@@ -20,3 +20,4 @@ resources:
   - ./kopia-truenas/ks.yaml
   - ./kopia-reports/ks.yaml
   - ./truenas/ks.yaml
+  - ./victoria-logs/ks.yaml
