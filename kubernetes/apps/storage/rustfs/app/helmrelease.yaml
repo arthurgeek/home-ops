@@ -8,6 +8,7 @@ spec:
     kind: OCIRepository
     name: rustfs
   interval: 1h
+  timeout: 10m
   values:
     controllers:
       *app :
