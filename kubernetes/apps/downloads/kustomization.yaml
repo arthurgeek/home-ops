@@ -16,6 +16,7 @@ resources:
   - ./gateway-oidc/ks.yaml
   - ./prowlarr/ks.yaml
   - ./qbittorrent/ks.yaml
+  - ./qui/ks.yaml
   - ./recyclarr/ks.yaml
   - ./radarr/ks.yaml
   - ./sonarr/ks.yaml
