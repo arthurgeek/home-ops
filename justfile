@@ -17,3 +17,8 @@ mod? talos 'talos'
 [private]
 log lvl msg *args:
     gum log -t rfc3339 -s -l "{{ lvl }}" "{{ msg }}" {{ args }}
+
+[doc('Format all files across the repository (YAML, JSON, Markdown, Just)')]
+fmt:
+    oxfmt .
+    just --fmt --unstable
