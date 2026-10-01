@@ -12,6 +12,7 @@ resources:
   - ./namespace.yaml
   - ./autobrr/ks.yaml
   - ./bazarr/ks.yaml
+  - ./cleanrr/ks.yaml
   - ./flaresolverr/ks.yaml
   - ./gateway-oidc/ks.yaml
   - ./prowlarr/ks.yaml
