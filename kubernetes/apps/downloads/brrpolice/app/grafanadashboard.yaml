@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: brrpolice
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  folder: Downloads
+  url: https://raw.githubusercontent.com/zariel/brrpolice/main/dashboards/grafana/brrpolice-overview.json

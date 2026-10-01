@@ -1,0 +1,88 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app brrpolice
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: brrpolice
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/zariel/brrpolice
+              tag: v0.15.2@sha256:243b80bb8a809a069031f4edf3f31791252af89a38da9a13783bba18ce5f7df6
+            env:
+              BRRPOLICE_DATABASE__PATH: /data/brrpolice.sqlite
+              BRRPOLICE_HTTP__HOST: 0.0.0.0
+              BRRPOLICE_HTTP__PORT: &port 9090
+              BRRPOLICE_QBITTORRENT__BASE_URL: http://qbittorrent.downloads.svc.cluster.local:8080
+              BRRPOLICE_LOGGING__LEVEL: info
+              BRRPOLICE_LOGGING__FORMAT: json
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /readyz
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /readyz
+                    port: *port
+                  failureThreshold: 30
+                  periodSeconds: 10
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+              limits:
+                memory: 128Mi
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    serviceMonitor:
+      app:
+        endpoints:
+          - port: http
+    persistence:
+      data:
+        existingClaim: *app
+        globalMounts:
+          - path: /data
