@@ -14,3 +14,4 @@ resources:
   - ./external-services/ks.yaml
   - ./unifi-dns/ks.yaml
   - ./tailscale/ks.yaml
+  - ./smtp-relay/ks.yaml
