@@ -5,7 +5,9 @@ namespace: default
 
 components:
   - ../../components/sops
+  - ../../components/kopiur/secret
 
 resources:
   - ./namespace.yaml
   - ./echo/ks.yaml
+  - ./atuin/ks.yaml
