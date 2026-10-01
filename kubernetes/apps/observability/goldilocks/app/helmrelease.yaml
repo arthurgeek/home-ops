@@ -1,0 +1,73 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: goldilocks
+spec:
+  chart:
+    spec:
+      chart: goldilocks
+      version: 11.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: fairwinds-stable
+  interval: 1h
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    controller:
+      flags:
+        on-by-default: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+    dashboard:
+      replicaCount: 1
+      flags:
+        on-by-default: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+      httpRoute:
+        enabled: true
+        labels:
+          oidc: pocket-id
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        hostnames:
+          - "goldilocks.${SECRET_DOMAIN}"
+    vpa:
+      enabled: true
+      updater:
+        enabled: false
+      admissionController:
+        enabled: false
+      recommender:
+        extraArgs:
+          prometheus-address: http://kube-prometheus-stack-prometheus.observability:9090
+          prometheus-cadvisor-job-name: kubelet
+          storage: prometheus
+          history-length: 8d
+          pod-namespace-label: namespace
+          pod-name-label: pod
+          container-namespace-label: namespace
+          container-pod-name-label: pod
+          container-name-label: container
+        resources:
+          requests:
+            cpu: 10m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+    metrics-server:
+      enabled: false
