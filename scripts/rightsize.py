@@ -30,6 +30,7 @@ from ruamel.yaml import YAML
 
 # Namespaces excluded from automated right-sizing (core infrastructure)
 EXCLUDED_NAMESPACES = {
+    "actions-runner-system",
     "kube-system",
     "rook-ceph",
     "openebs-system",
@@ -567,7 +568,9 @@ def main():
             if p["limit_trigger"]:
                 res["limits"]["memory"] = p["new_limit_mem"]
 
-            files_to_save[p["file"]] = p["hr_yaml"]
+    if not proposals:
+        print("\n✨ All workloads are currently right-sized within target thresholds. Nothing to do!")
+        return 0
 
     if args.apply or args.create_pr:
         print(f"\nWriting updates to {len(files_to_save)} HelmRelease file(s)...")
