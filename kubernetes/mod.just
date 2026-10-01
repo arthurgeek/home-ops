@@ -26,4 +26,22 @@ validate:
         | kubeconform -strict -ignore-missing-schemas -summary \
             -cache "${XDG_CACHE_HOME:-$HOME/.cache}/kubeconform" \
             -schema-location default \
-            -schema-location 'https://k8s-schemas.home-operations.com/{{{{ .Group }}/{{{{ .ResourceKind }}_{{{{ .ResourceAPIVersion }}.json'
+            -schema-location 'https://k8s-schemas.home-operations.com/{{{{ .Group }}}}/{{{{ .ResourceKind }}}}_{{{{ .ResourceAPIVersion }}}}.json'
+
+[doc('Report cluster resource right-sizing recommendations from Goldilocks/VPA')]
+[group('kube')]
+[working-directory('..')]
+rightsize *args:
+    uv run ./scripts/rightsize.py {{ args }}
+
+[doc('Apply cluster resource right-sizing recommendations to HelmReleases')]
+[group('kube')]
+[working-directory('..')]
+rightsize-apply *args:
+    uv run ./scripts/rightsize.py --apply {{ args }}
+
+[doc('Create a right-sizing git branch, commit, and prepare pull request')]
+[group('kube')]
+[working-directory('..')]
+rightsize-pr *args:
+    uv run ./scripts/rightsize.py --create-pr {{ args }}
