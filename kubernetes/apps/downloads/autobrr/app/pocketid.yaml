@@ -1,0 +1,30 @@
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDUserGroup
+metadata:
+  name: autobrr-users
+spec:
+  name: autobrr-users
+  friendlyName: Autobrr Users
+  users:
+    userRefs:
+      - name: owner
+        namespace: security
+---
+apiVersion: pocketid.internal/v1alpha1
+kind: PocketIDOIDCClient
+metadata:
+  name: autobrr
+spec:
+  name: Autobrr
+  clientID: autobrr
+  clientSecretRef:
+    name: autobrr-secret
+    key: AUTOBRR__OIDC_CLIENT_SECRET
+  callbackUrls:
+    - https://autobrr.${SECRET_DOMAIN}/api/auth/oidc/callback
+  launchUrl: https://autobrr.${SECRET_DOMAIN}
+  allowedUserGroups:
+    - name: autobrr-users
+  secret:
+    enabled: false

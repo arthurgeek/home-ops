@@ -10,6 +10,7 @@ components:
 resources:
   - ./media-nfs.yaml
   - ./namespace.yaml
+  - ./autobrr/ks.yaml
   - ./bazarr/ks.yaml
   - ./flaresolverr/ks.yaml
   - ./gateway-oidc/ks.yaml
