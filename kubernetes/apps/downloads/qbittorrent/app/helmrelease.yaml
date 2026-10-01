@@ -53,9 +53,10 @@ spec:
               capabilities: { drop: ["ALL"] }
             resources:
               requests:
-                cpu: 100m
+                cpu: 150m
+                memory: 1536Mi
               limits:
-                memory: 8Gi
+                memory: 3Gi
           # Reannounces torrents whose trackers are failing; reaches the WebUI
           # on localhost, where qBittorrent skips its login.
           qbrr:
@@ -71,6 +72,7 @@ spec:
             resources:
               requests:
                 cpu: 10m
+                memory: 64Mi
               limits:
                 memory: 128Mi
     defaultPodOptions:

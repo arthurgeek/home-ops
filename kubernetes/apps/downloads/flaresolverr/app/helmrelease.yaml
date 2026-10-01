@@ -38,11 +38,11 @@ spec:
             resources:
               requests:
                 cpu: 10m
-                memory: 150Mi
+                memory: 512Mi
               limits:
                 # Each concurrent challenge runs its own Chrome tab; 1Gi was
                 # OOM-killed during an indexer sync.
-                memory: 2Gi
+                memory: 768Mi
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true

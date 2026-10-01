@@ -34,14 +34,14 @@ spec:
               limits:
                 memory: 1Gi
               requests:
-                cpu: 250m
-                memory: 512Mi
+                cpu: 50m
+                memory: 128Mi
             registrar:
               limits:
                 memory: 256Mi
               requests:
-                cpu: 50m
-                memory: 128Mi
+                cpu: 10m
+                memory: 32Mi
         controllerPlugin:
           priorityClassName: system-cluster-critical
           resources:
@@ -49,37 +49,38 @@ spec:
               limits:
                 memory: 256Mi
               requests:
-                cpu: 100m
-                memory: 128Mi
+                cpu: 25m
+                memory: 64Mi
             omapGenerator:
               limits:
                 memory: 1Gi
               requests:
-                cpu: 250m
-                memory: 512Mi
+                cpu: 25m
+                memory: 128Mi
             plugin:
               limits:
                 memory: 1Gi
               requests:
-                memory: 512Mi
+                cpu: 25m
+                memory: 128Mi
             provisioner:
               limits:
                 memory: 256Mi
               requests:
-                cpu: 100m
-                memory: 128Mi
+                cpu: 25m
+                memory: 64Mi
             resizer:
               limits:
                 memory: 256Mi
               requests:
-                cpu: 100m
-                memory: 128Mi
+                cpu: 25m
+                memory: 64Mi
             snapshotter:
               limits:
                 memory: 256Mi
               requests:
-                cpu: 100m
-                memory: 128Mi
+                cpu: 25m
+                memory: 64Mi
     drivers:
       rbd:
         enabled: true
