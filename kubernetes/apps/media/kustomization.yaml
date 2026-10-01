@@ -10,6 +10,7 @@ components:
 resources:
   - ./media-nfs.yaml
   - ./namespace.yaml
+  - ./agregarr/ks.yaml
   - ./jellyfin/ks.yaml
   - ./kometa/ks.yaml
   - ./maintainerr/ks.yaml
