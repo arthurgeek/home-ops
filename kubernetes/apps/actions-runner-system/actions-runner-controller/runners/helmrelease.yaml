@@ -1,0 +1,36 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: arc-home-ops
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: gha-runner-scale-set
+  interval: 1h
+  values:
+    runnerScaleSetName: home-ops-runner
+    githubConfigUrl: https://github.com/arthurgeek/home-ops
+    githubConfigSecret: actions-runner-controller-auth
+    minRunners: 0
+    maxRunners: 3
+    controllerServiceAccount:
+      name: actions-runner-controller
+      namespace: actions-runner-system
+    template:
+      spec:
+        serviceAccountName: home-ops-runner
+        containers:
+          - name: runner
+            image: ghcr.io/home-operations/actions-runner:2.337.0
+            command: ["/home/runner/run.sh"]
+            env:
+              - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
+                value: "false"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                cpu: 2000m
+                memory: 2Gi
