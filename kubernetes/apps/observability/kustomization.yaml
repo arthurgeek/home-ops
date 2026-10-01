@@ -21,3 +21,4 @@ resources:
   - ./kopia-reports/ks.yaml
   - ./truenas/ks.yaml
   - ./victoria-logs/ks.yaml
+  - ./silence-operator/ks.yaml
