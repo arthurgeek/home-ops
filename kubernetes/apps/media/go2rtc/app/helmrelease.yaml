@@ -21,6 +21,21 @@ spec:
               tag: unifi-talkback@sha256:6a1079f872de77d69fa2d6b7237a269664eb970644858a14382355626d488c51
             env:
               TZ: America/Sao_Paulo
+              UNIFI_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: UNIFI_API_KEY
+              DOORBELL_RTSP_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: DOORBELL_RTSP_TOKEN
+              DOORBELL_CAMERA_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: DOORBELL_CAMERA_ID
             probes:
               liveness: &probes
                 enabled: true
@@ -98,6 +113,13 @@ spec:
         existingClaim: *app
         globalMounts:
           - path: /config
+      config-file:
+        type: configMap
+        name: go2rtc-config
+        globalMounts:
+          - path: /config/go2rtc.yaml
+            subPath: go2rtc.yaml
+            readOnly: true
       tmp:
         type: emptyDir
         globalMounts:
