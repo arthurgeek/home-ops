@@ -1,0 +1,128 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app go2rtc
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: go2rtc
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/arthurgeek/go2rtc
+              tag: unifi-talkback@sha256:6a1079f872de77d69fa2d6b7237a269664eb970644858a14382355626d488c51
+            env:
+              TZ: America/Sao_Paulo
+              UNIFI_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: UNIFI_API_KEY
+              DOORBELL_RTSP_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: DOORBELL_RTSP_TOKEN
+              DOORBELL_CAMERA_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: go2rtc-unifi-secret
+                    key: DOORBELL_CAMERA_ID
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: &port 1984
+                  periodSeconds: 15
+                  timeoutSeconds: 3
+                  failureThreshold: 3
+              readiness: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  periodSeconds: 5
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 1024Mi
+    defaultPodOptions:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+    service:
+      app:
+        type: LoadBalancer
+        annotations:
+          lbipam.cilium.io/ips: 10.10.5.231
+        externalTrafficPolicy: Local
+        ports:
+          http:
+            port: *port
+          rtsp:
+            port: 8554
+          webrtc-tcp:
+            port: 8555
+            protocol: TCP
+          webrtc-udp:
+            port: 8555
+            protocol: UDP
+    route:
+      app:
+        labels:
+          oidc: pocket-id
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: go2rtc
+          gethomepage.dev/icon: go2rtc.png
+          gethomepage.dev/description: Camera & WebRTC Streaming
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=go2rtc
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+    persistence:
+      config:
+        existingClaim: *app
+        globalMounts:
+          - path: /config
+      config-file:
+        type: configMap
+        name: go2rtc-config
+        globalMounts:
+          - path: /config/go2rtc.yaml
+            subPath: go2rtc.yaml
+            readOnly: true
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

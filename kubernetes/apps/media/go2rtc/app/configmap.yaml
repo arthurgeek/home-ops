@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: go2rtc-config
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+data:
+  go2rtc.yaml: |
+    api:
+      listen: ":1984"
+      origin: "*"
+
+    rtsp:
+      listen: ":8554"
+
+    webrtc:
+      listen: ":8555"
+
+    log:
+      level: info
+      unifi: debug
+      webrtc: trace
+
+    streams:
+      doorbell:
+        - "rtsp://10.10.5.1:7447/${DOORBELL_RTSP_TOKEN}"
+        - "unifi-talkback:https://10.10.5.1?camera_id=${DOORBELL_CAMERA_ID}&api_key=${UNIFI_API_KEY}"
+
+    preload:
+      doorbell:
