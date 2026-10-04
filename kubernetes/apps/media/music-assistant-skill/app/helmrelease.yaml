@@ -1,0 +1,90 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app music-assistant-skill
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: music-assistant-skill
+  interval: 1h
+  values:
+    controllers:
+      *app :
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/alams154/music-assistant-skill
+              tag: 0.0.39-beta@sha256:8e8bfc59af754e6892599b36e9d2ba154e2e4ddb4461118900764477d4adb70e
+            env:
+              TZ: America/Sao_Paulo
+              PORT: &port 5000
+              LOCALE: pt-BR
+              SKILL_HOSTNAME: "https://alexa-skill.${SECRET_DOMAIN}"
+              MA_HOSTNAME: "https://music-stream.${SECRET_DOMAIN}"
+              APP_USERNAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: music-assistant-skill-secret
+                    key: APP_USERNAME
+              APP_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: music-assistant-skill-secret
+                    key: APP_PASSWORD
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  periodSeconds: 15
+                  timeoutSeconds: 3
+                  failureThreshold: 3
+              readiness: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  periodSeconds: 5
+                  failureThreshold: 30
+            resources:
+              requests:
+                cpu: 20m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+    service:
+      app:
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Media
+          gethomepage.dev/name: Alexa Skill Bridge
+          gethomepage.dev/icon: alexa.png
+          gethomepage.dev/description: Music Assistant Alexa Skill
+          gethomepage.dev/pod-selector: app.kubernetes.io/name=music-assistant-skill
+        hostnames: ["alexa-skill.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-external
+            namespace: network
+            sectionName: https
+    persistence:
+      ask-data:
+        existingClaim: *app
+        globalMounts:
+          - path: /root/.ask
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

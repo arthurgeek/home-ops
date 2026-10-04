@@ -15,6 +15,7 @@ resources:
   - ./jellyfin/ks.yaml
   - ./kometa/ks.yaml
   - ./maintainerr/ks.yaml
+  - ./music-assistant-skill/ks.yaml
   - ./plex-auto-languages/ks.yaml
   - ./seerr/ks.yaml
   - ./tautulli/ks.yaml
