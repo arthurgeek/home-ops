@@ -23,6 +23,9 @@ spec:
         memory: 256Mi
     deschedulerPolicyAPIVersion: descheduler/v1alpha2
     deschedulerPolicy:
+      # A few pods per pass, so rebalancing is gradual.
+      maxNoOfPodsToEvictPerNode: 2
+      maxNoOfPodsToEvictTotal: 4
       metricsProviders:
         - source: KubernetesMetrics
       profiles:
@@ -34,21 +37,36 @@ spec:
                   defaultDisabled:
                     - FailedBarePods
                     - PodsWithLocalStorage
-                    - SystemCriticalPods
             - name: LowNodeUtilization
               args:
                 metricsUtilization:
                   source: KubernetesMetrics
+                # The cluster's own services stay where they are: many are a
+                # single replica fronting admission webhooks, the network,
+                # GitOps or storage. Everything else, monitoring included,
+                # can move.
+                evictableNamespaces:
+                  exclude:
+                    - cert-manager
+                    - external-secrets
+                    - flux-system
+                    - kopiur-system
+                    - kube-system
+                    - network
+                    - rook-ceph
                 # Nodes under all of these are underused; pods move off
-                # nodes above any of the targets.
+                # nodes above any of the targets. The targets are low and
+                # the pod allowance is wide, so CPU and memory decide: the
+                # larger node already runs many small pods but has most of
+                # the headroom.
                 thresholds:
                   cpu: 20
-                  memory: 20
-                  pods: 20
+                  memory: 30
+                  pods: 60
                 targetThresholds:
-                  cpu: 50
-                  memory: 50
-                  pods: 50
+                  cpu: 25
+                  memory: 40
+                  pods: 80
             - name: RemoveFailedPods
               args:
                 reasons:
