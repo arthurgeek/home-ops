@@ -1,0 +1,21 @@
+---
+# Each worker takes the whole iGPU of k8s-0 or k8s-1 (8th-gen UHD 630); k8s-2's
+# faster one stays with Jellyfin.
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: tdarr-node
+  annotations:
+    # The spec is immutable; recreate the template when it changes. Claims
+    # already made from it are unaffected.
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          exactly:
+            deviceClassName: gpu.intel.com
+            selectors:
+              - cel:
+                  expression: device.attributes["gpu.intel.com"].pciId == "0x3e91"

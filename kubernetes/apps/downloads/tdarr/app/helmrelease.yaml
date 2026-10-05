@@ -1,0 +1,211 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app tdarr
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: tdarr
+  interval: 1h
+  values:
+    controllers:
+      server:
+        # The database sits on a volume only one pod can hold at a time.
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          # The image's init needs root to start; it then runs Tdarr as
+          # PUID/PGID, and the capabilities cover what it does on the way.
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: { type: RuntimeDefault }
+        containers:
+          app:
+            image:
+              repository: ghcr.io/haveagitgat/tdarr
+              tag: 2.94.02@sha256:e06ecd0a5fc27ab248622f61b59b5ab1d797d8249a3a6e12f2bcce6decfebd8c
+            env:
+              TZ: America/Sao_Paulo
+              PUID: 1000
+              PGID: 1000
+              UMASK_SET: "002"
+              serverPort: &serverPort 8266
+              webUIPort: &webPort 8265
+              # The workers do the transcoding; the server only schedules.
+              internalNode: false
+              inContainer: true
+              ffmpegVersion: 7
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *webPort
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *webPort
+                  periodSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["CHOWN", "SETUID", "SETGID", "FOWNER", "DAC_OVERRIDE"]
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+      node:
+        # One worker on each of k8s-0 and k8s-1, each with its own iGPU.
+        replicas: 2
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: { type: RuntimeDefault }
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: ["k8s-0", "k8s-1"]
+          resourceClaims:
+            - name: gpu
+              resourceClaimTemplateName: tdarr-node
+        containers:
+          app:
+            image:
+              repository: ghcr.io/haveagitgat/tdarr_node
+              tag: 2.94.02@sha256:5493c345c3bfc13e107985ae702b0157897f3e1697bc1120af2798ba3f4d520a
+            env:
+              TZ: America/Sao_Paulo
+              PUID: 1000
+              PGID: 1000
+              UMASK_SET: "002"
+              serverIP: tdarr
+              serverPort: *serverPort
+              inContainer: true
+              ffmpegVersion: 7
+              nodeType: mapped
+              # The restored library is set to process by itself; nothing
+              # runs until the workers are resumed in the web UI.
+              startPaused: true
+              # Starting worker counts, set here so a restarted worker comes
+              # back the same: the GPU does the transcoding, and the CPU is
+              # left to the other apps.
+              transcodegpuWorkers: 1
+              transcodecpuWorkers: 0
+              healthcheckgpuWorkers: 0
+              healthcheckcpuWorkers: 0
+              nodeName:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["CHOWN", "SETUID", "SETGID", "FOWNER", "DAC_OVERRIDE"]
+            resources:
+              claims:
+                - name: gpu
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 4Gi
+    service:
+      server:
+        controller: server
+        ports:
+          http:
+            port: *webPort
+          server:
+            port: *serverPort
+    route:
+      app:
+        labels:
+          oidc: pocket-id
+        hostnames: ["{{ .Release.Name }}.${SECRET_DOMAIN}"]
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - identifier: server
+                port: *webPort
+    persistence:
+      config:
+        existingClaim: *app
+        advancedMounts:
+          server:
+            app:
+              - path: /app/server
+                subPath: server
+              - path: /app/configs
+                subPath: configs
+      # The library folders were saved against /media/Media. Only the two
+      # library folders are mounted: the downloads next to them, which are
+      # still seeding and share files with them by hardlink, are not visible.
+      media:
+        existingClaim: media
+        advancedMounts:
+          server:
+            app:
+              - path: /media/Media/Movies
+                subPath: Movies
+              - path: /media/Media/TV
+                subPath: TV
+          node:
+            app:
+              - path: /media/Media/Movies
+                subPath: Movies
+              - path: /media/Media/TV
+                subPath: TV
+      logs:
+        type: emptyDir
+        advancedMounts:
+          server:
+            app:
+              - path: /app/logs
+          node:
+            app:
+              - path: /app/logs
+      node-configs:
+        type: emptyDir
+        advancedMounts:
+          node:
+            app:
+              - path: /app/configs
+      # Where the workers keep a file while transcoding it, at the path the
+      # library was saved with. The limit makes kubelet evict that worker,
+      # not the node, if a file outgrows it.
+      cache:
+        type: emptyDir
+        sizeLimit: 50Gi
+        advancedMounts:
+          node:
+            app:
+              - path: /cache
