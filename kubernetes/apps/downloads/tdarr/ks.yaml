@@ -1,0 +1,33 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tdarr
+spec:
+  components:
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
+  dependsOn:
+    - name: intel-gpu-resource-driver
+      namespace: kube-system
+    - name: kopiur-repository
+      namespace: kopiur-system
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  interval: 1h
+  path: ./kubernetes/apps/downloads/tdarr/app
+  postBuild:
+    substitute:
+      APP: tdarr
+      KOPIUR_CLAIM: tdarr
+      KOPIUR_CAPACITY: 5Gi
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: downloads
+  wait: false
