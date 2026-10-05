@@ -23,6 +23,37 @@ spec:
           for: 1m
           labels:
             severity: warning
+        # photos, Geral, homes and k8s are scheduled once a day; documents every
+        # six hours. A missed run or two is tolerated before alerting.
+        - alert: KopiaSnapshotStale
+          annotations:
+            summary: "The NAS backup of {{ $labels.source }} has not completed in {{ $value | humanizeDuration }}."
+          expr: time() - kopia_report_last_success_timestamp_seconds{source=~"photos|Geral|homes|k8s"} > 30 * 3600
+          for: 30m
+          labels:
+            severity: critical
+        - alert: KopiaDocumentsSnapshotStale
+          annotations:
+            summary: "The NAS backup of documents has not completed in {{ $value | humanizeDuration }}; it runs every six hours."
+          expr: time() - kopia_report_last_success_timestamp_seconds{source="documents"} > 9 * 3600
+          for: 30m
+          labels:
+            severity: critical
+        # A folder that never reported, for example after the receiver lost its state.
+        - alert: KopiaSnapshotNeverReported
+          annotations:
+            summary: "No NAS backup report has ever arrived for {{ $labels.source }}."
+          expr: |-
+            (
+              label_replace(vector(1), "source", "photos", "", "")
+              or label_replace(vector(1), "source", "Geral", "", "")
+              or label_replace(vector(1), "source", "homes", "", "")
+              or label_replace(vector(1), "source", "documents", "", "")
+              or label_replace(vector(1), "source", "k8s", "", "")
+            ) unless on (source) kopia_report_last_success_timestamp_seconds
+          for: 1h
+          labels:
+            severity: critical
         - alert: KopiaReportsDown
           annotations:
             summary: "The receiver for NAS backup reports has not answered for ten minutes, so failures would go unnoticed."
