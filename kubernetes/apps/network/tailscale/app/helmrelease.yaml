@@ -9,12 +9,40 @@ spec:
     name: tailscale
   interval: 1h
   values:
+    global:
+      fullnameOverride: tailscale-k8s
     controllers:
       *app :
         # Two routers on different nodes advertise the same network, so the
-        # tailnet keeps working through one node's outage.
+        # tailnet keeps working through one node's outage. The first replica is
+        # also the exit node. Names and node state are stable across restarts,
+        # so clients keep their exit-node choice.
+        type: statefulset
         replicas: 2
-        strategy: RollingUpdate
+        statefulset:
+          podManagementPolicy: Parallel
+          volumeClaimTemplates:
+            - name: state
+              globalMounts:
+                - path: /var/lib/tailscale
+              accessMode: ReadWriteOnce
+              size: 100Mi
+              storageClass: ceph-block
+        initContainers:
+          forwarding:
+            image:
+              repository: ghcr.io/tailscale/tailscale
+              tag: v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+            command:
+              - sh
+              - -c
+              - |
+                echo 1 > /proc/sys/net/ipv4/ip_forward
+                echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+            securityContext:
+              privileged: true
+              runAsUser: 0
+              runAsNonRoot: false
         annotations:
           reloader.stakater.com/auto: "true"
         containers:
@@ -22,17 +50,25 @@ spec:
             image:
               repository: ghcr.io/tailscale/tailscale
               tag: v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+            command:
+              - sh
+              - -c
+              - |
+                if [ "$TS_HOSTNAME" = tailscale-k8s-0 ]; then
+                  export TS_EXTRA_ARGS=--advertise-exit-node
+                fi
+                exec /usr/local/bin/containerboot
             env:
               NO_AUTOUPDATE: true
               TZ: America/Sao_Paulo
-              TS_USERSPACE: true
-              TS_STATE_DIR: /tmp
+              TS_USERSPACE: false
+              # The Talos kernel has no legacy iptables tables.
+              TS_DEBUG_FIREWALL_MODE: nftables
+              TS_STATE_DIR: /var/lib/tailscale
               TS_SOCKET: /tmp/tailscaled.sock
-              # State stays in the pod; the ephemeral node is registered anew.
               TS_KUBE_SECRET: ""
               TS_ACCEPT_DNS: false
               TS_ROUTES: 10.10.5.0/24
-              TS_EXTRA_ARGS: --advertise-exit-node
               TS_ENABLE_HEALTH_CHECK: true
               TS_LOCAL_ADDR_PORT: 0.0.0.0:9002
               TS_HOSTNAME:
@@ -57,7 +93,11 @@ spec:
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true
-              capabilities: { drop: ["ALL"] }
+              runAsUser: 0
+              runAsNonRoot: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["NET_ADMIN"]
             resources:
               requests:
                 cpu: 10m
@@ -67,9 +107,6 @@ spec:
     defaultPodOptions:
       automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
         seccompProfile: { type: RuntimeDefault }
       topologySpreadConstraints:
         - maxSkew: 1
@@ -84,10 +121,24 @@ spec:
           http:
             port: *port
     persistence:
+      tun:
+        type: hostPath
+        hostPath: /dev/net/tun
+        hostPathType: CharDevice
+        advancedMounts:
+          tailscale:
+            app:
+              - path: /dev/net/tun
       tmp:
         type: emptyDir
         globalMounts:
           - path: /tmp
+      run:
+        type: emptyDir
+        advancedMounts:
+          tailscale:
+            app:
+              - path: /run
       cache:
         type: emptyDir
         globalMounts:
