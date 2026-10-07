@@ -7,15 +7,33 @@ metadata:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 data:
   go2rtc.yaml: |
+    # Only the modules in use; exec and echo can run commands, so they stay off.
+    app:
+      modules: [api, ws, rtsp, webrtc, unifi]
+
     api:
       listen: ":1984"
       origin: "*"
+      # Only the endpoints Home Assistant and the doorbell card use; the
+      # restart and exit endpoints are not served.
+      allow_paths:
+        - /api
+        - /api/streams
+        - /api/webrtc
+        - /api/ws
+        # Enable only for debug: the web pages and the config view,
+        # to check that a config change was picked up.
+        # - /
+        # - /api/config
 
     rtsp:
       listen: ":8554"
 
     webrtc:
       listen: ":8555"
+      # Public name for viewers away from home.
+      candidates:
+        - "${RTC_HOSTNAME}:8555"
 
     log:
       level: info
