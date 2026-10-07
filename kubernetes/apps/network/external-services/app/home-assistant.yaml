@@ -2,6 +2,8 @@
 # Home Assistant runs outside the cluster; same pattern as truenas.yaml.
 # HA must trust Envoy as a reverse proxy (http.use_x_forwarded_for and
 # http.trusted_proxies in its configuration.yaml) or it rejects requests.
+# The route is on both gateways so the companion app works away from home;
+# HA's own login is the only gate, there is no OIDC in front of it.
 apiVersion: v1
 kind: Service
 metadata:
@@ -36,6 +38,9 @@ spec:
   hostnames: ["ha.${SECRET_DOMAIN}"]
   parentRefs:
     - name: envoy-internal
+      namespace: network
+      sectionName: https
+    - name: envoy-external
       namespace: network
       sectionName: https
   rules:
