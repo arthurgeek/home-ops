@@ -1,0 +1,45 @@
+---
+# Music Assistant's server runs as an add-on on Home Assistant (10.10.4.10:8095): web UI, API and the
+# websocket its mobile app connects to. Home Assistant's ingress path doesn't work for the app (it only
+# exists inside an HA browser session), so the server gets its own hostname and the wildcard certificate.
+# LAN only (envoy-internal); away from home the app goes through Tailscale.
+apiVersion: v1
+kind: Service
+metadata:
+  name: music-assistant
+spec:
+  ports:
+    - name: http
+      port: 8095
+      targetPort: 8095
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: music-assistant
+  labels:
+    kubernetes.io/service-name: music-assistant
+addressType: IPv4
+endpoints:
+  - addresses: ["10.10.4.10"] # UniFi DHCP reservation on the IoT network
+    conditions:
+      ready: true
+ports:
+  - name: http
+    port: 8095
+    protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: music-assistant
+spec:
+  hostnames: ["music.${SECRET_DOMAIN}"]
+  parentRefs:
+    - name: envoy-internal
+      namespace: network
+      sectionName: https
+  rules:
+    - backendRefs:
+        - name: music-assistant
+          port: 8095
