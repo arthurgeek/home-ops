@@ -21,6 +21,7 @@ spec:
               tag: unifi-talkback@sha256:6a1079f872de77d69fa2d6b7237a269664eb970644858a14382355626d488c51
             env:
               TZ: America/Sao_Paulo
+              RTC_HOSTNAME: webrtc.${SECRET_DOMAIN}
               UNIFI_API_KEY:
                 valueFrom:
                   secretKeyRef:

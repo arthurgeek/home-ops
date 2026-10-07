@@ -7,6 +7,10 @@ metadata:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 data:
   go2rtc.yaml: |
+    # Only the modules in use; exec and echo can run commands, so they stay off.
+    app:
+      modules: [api, ws, rtsp, webrtc, ffmpeg, unifi]
+
     api:
       listen: ":1984"
       origin: "*"
@@ -16,6 +20,9 @@ data:
 
     webrtc:
       listen: ":8555"
+      # Public name for viewers away from home.
+      candidates:
+        - "${RTC_HOSTNAME}:8555"
 
     log:
       level: info
