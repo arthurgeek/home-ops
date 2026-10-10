@@ -22,7 +22,7 @@ spec:
         serviceAccountName: home-ops-runner
         containers:
           - name: runner
-            image: ghcr.io/home-operations/actions-runner:2.337.0
+            image: ghcr.io/home-operations/actions-runner:2.338.0
             command: ["/home/runner/run.sh"]
             env:
               - name: ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER
