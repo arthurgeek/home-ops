@@ -8,7 +8,7 @@
 }:
 let
   # renovate: datasource=github-releases depName=postfinance/topf
-  version = "0.6.0";
+  version = "0.6.1";
   platforms = {
     x86_64-linux = {
       asset = "linux_amd64";
