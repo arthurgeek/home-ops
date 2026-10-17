@@ -18,7 +18,7 @@ spec:
           app:
             image:
               repository: ghcr.io/alams154/music-assistant-skill
-              tag: 0.0.39-beta@sha256:8e8bfc59af754e6892599b36e9d2ba154e2e4ddb4461118900764477d4adb70e
+              tag: 0.0.39-beta@sha256:b1ef33ad0b05b7e0a315535e8141177898be4b6a0401decf43dedf424f0d90f1
             env:
               TZ: America/Sao_Paulo
               PORT: &port 5000
