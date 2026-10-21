@@ -5,5 +5,4 @@ resources:
   - ./home-assistant.yaml
   - ./music-assistant.yaml
   - ./music-assistant-stream.yaml
-  - ./plex.yaml
   - ./truenas.yaml
