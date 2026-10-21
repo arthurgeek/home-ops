@@ -1,0 +1,27 @@
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: media-high
+value: 1000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Higher priority media server (Plex)"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: media-normal
+value: 500
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Standard priority media server (Jellyfin)"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: media-low
+value: 100
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Lower priority background transcode (Tdarr)"

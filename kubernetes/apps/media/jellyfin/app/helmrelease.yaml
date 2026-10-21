@@ -59,6 +59,7 @@ spec:
               limits:
                 memory: 1536Mi
     defaultPodOptions:
+      priorityClassName: media-normal
       resourceClaims:
         - name: gpu
           resourceClaimTemplateName: jellyfin

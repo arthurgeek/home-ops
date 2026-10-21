@@ -71,11 +71,11 @@ spec:
               limits:
                 memory: 1Gi
       node:
-        # One worker on each of k8s-0 and k8s-1, each with its own iGPU.
-        replicas: 2
+        replicas: 1
         annotations:
           reloader.stakater.com/auto: "true"
         pod:
+          priorityClassName: media-low
           securityContext:
             runAsUser: 0
             runAsGroup: 0

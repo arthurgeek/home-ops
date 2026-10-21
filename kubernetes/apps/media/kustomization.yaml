@@ -18,5 +18,6 @@ resources:
   - ./music-assistant-skill/ks.yaml
   - ./plex-auto-languages/ks.yaml
   - ./plex/ks.yaml
+  - ./priorityclass.yaml
   - ./seerr/ks.yaml
   - ./tautulli/ks.yaml
