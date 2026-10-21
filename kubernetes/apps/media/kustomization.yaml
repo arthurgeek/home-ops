@@ -17,5 +17,6 @@ resources:
   - ./maintainerr/ks.yaml
   - ./music-assistant-skill/ks.yaml
   - ./plex-auto-languages/ks.yaml
+  - ./plex/ks.yaml
   - ./seerr/ks.yaml
   - ./tautulli/ks.yaml

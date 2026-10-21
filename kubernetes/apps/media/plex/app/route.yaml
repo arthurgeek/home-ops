@@ -1,36 +1,15 @@
 ---
-# Plex runs on TrueNAS, next to the media; this gives it a LAN hostname (via
-# unifi-dns) and the wildcard certificate by routing through envoy-internal.
-apiVersion: v1
-kind: Service
-metadata:
-  name: plex
-spec:
-  ports:
-    - name: http
-      port: 32400
-      targetPort: 32400
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: plex
-  labels:
-    kubernetes.io/service-name: plex
-addressType: IPv4
-endpoints:
-  - addresses: ["10.10.5.10"] # TrueNAS
-    conditions:
-      ready: true
-ports:
-  - name: http
-    port: 32400
-    protocol: TCP
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: plex
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/group: Media
+    gethomepage.dev/name: Plex
+    gethomepage.dev/icon: plex.png
+    gethomepage.dev/description: Media Server
+    gethomepage.dev/pod-selector: app.kubernetes.io/name=plex
 spec:
   hostnames: ["plex.${SECRET_DOMAIN}"]
   parentRefs:
@@ -46,8 +25,6 @@ spec:
         - type: RequestHeaderModifier
           requestHeaderModifier: &pipeline
             set:
-              # Plex closes idle keep-alive connections after 20s unless this
-              # is set, so Envoy owns the pool.
               - name: X-Plex-Http-Pipeline
                 value: infinite
     - name: events
@@ -62,8 +39,7 @@ spec:
         - path:
             type: PathPrefix
             value: /:/websockets
-    - # https://forums.plex.tv/t/external-srt-subtitles-are-not-working-w-reverse-proxy/886540
-      name: subtitles
+    - name: subtitles
       backendRefs: *backendRefs
       filters:
         - type: RequestHeaderModifier
@@ -102,8 +78,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: plex
-      # Request buffering hangs WebSocket upgrades, so this rule gets the
-      # policy without it.
       sectionName: events
   timeout:
     http:

@@ -1,0 +1,23 @@
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: plex
+  annotations:
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          firstAvailable:
+            - name: gen12
+              deviceClassName: gpu.intel.com
+              selectors:
+                - cel:
+                    expression: device.attributes["gpu.intel.com"].pciId in ["0x4692", "0x4690"]
+            - name: gen8
+              deviceClassName: gpu.intel.com
+              selectors:
+                - cel:
+                    expression: device.attributes["gpu.intel.com"].pciId == "0x3e91"
