@@ -6,7 +6,7 @@
   # Renovate follows, and .github/workflows/renovate-lock.yaml re-locks.
   inputs = {
     # renovate: datasource=git-refs depName=https://github.com/NixOS/nixpkgs
-    nixpkgs.url = "github:NixOS/nixpkgs/6510408d147d8c5e6d76043e899e9251756f6a75"; # nixos-unstable
+    nixpkgs.url = "github:NixOS/nixpkgs/02c087f3fe673c9e317f206a627cb6b910336dbe"; # nixos-unstable
   };
 
   outputs =
