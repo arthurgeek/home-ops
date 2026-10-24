@@ -66,8 +66,8 @@ spec:
                 add: ["CHOWN", "SETUID", "SETGID", "FOWNER", "DAC_OVERRIDE"]
             resources:
               requests:
-                cpu: 50m
-                memory: 256Mi
+                cpu: 25m
+                memory: 384Mi
               limits:
                 memory: 1Gi
       node:
@@ -131,10 +131,12 @@ spec:
               claims:
                 - name: gpu
               requests:
-                cpu: 200m
-                memory: 512Mi
+                cpu: 150m
+                memory: 384Mi
               limits:
-                memory: 4Gi
+                # Transcodes burst well past the idle footprint; sized to the
+                # VPA upper bound rather than twice the request.
+                memory: 2Gi
     service:
       server:
         controller: server
