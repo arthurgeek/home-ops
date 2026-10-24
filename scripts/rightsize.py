@@ -12,7 +12,7 @@ Cluster-wide Resource Right-Sizing Automation for Home-Ops.
 Queries Goldilocks / VPA recommendations from the cluster, compares them
 against declared HelmRelease values in Git, and applies:
 1. Asymmetric ratcheting: Fast scale-up for starved workloads, gradual/damped
-   step-downs (max 20-25% reduction per cycle) to prevent starvation cliffs.
+   step-downs (one tier per cycle, never below the VPA target) to prevent starvation cliffs.
 2. Dynamic drift thresholds: Scaled sensitivity for large allocations vs small allocations.
 3. No restrictive CPU limits: Keeps CPU unthrottled (burst-capable) while right-sizing
    memory limits to eliminate KubeMemoryOvercommit.
@@ -107,6 +107,22 @@ def clamp_downgrade(curr: float, target: float, max_drop_pct: float) -> float:
     return target
 
 
+def step_down_tier(curr: float, target: float, tiers: list[int], max_drop_pct: float) -> int:
+    """Steps a request down one tier per cycle, never below the VPA target rounded up to a tier.
+
+    Damping alone cannot move a request that sits on a tier: a 20% cut from 100m is 80m,
+    which rounds back up to 100m. When that happens the next lower tier is taken instead.
+    """
+    floor_val = round_up_tier(target, tiers)
+    if curr <= 0 or floor_val >= curr:
+        return int(curr)
+    candidate = round_up_tier(clamp_downgrade(curr, target, max_drop_pct), tiers)
+    if candidate >= curr:
+        lower = [t for t in tiers if t < curr]
+        candidate = lower[-1] if lower else floor_val
+    return int(max(candidate, floor_val))
+
+
 def clamp_scaleup(curr_val: float, target_val: float, tiers: list[int], max_step_tiers: int = 2, max_factor: float = 2.0, max_initial_val: float | None = None) -> float:
     """Clamps scale-up recommendations to avoid sudden capacity spikes (symmetric ratcheting)."""
     if curr_val <= 0:
@@ -182,17 +198,31 @@ def find_helmrelease_file(workspace_root: Path, namespace: str, workload: str) -
                 content = candidate.read_text()
                 if f"name: {workload}" in content or f"name: &app {workload}" in content:
                     return candidate
+                # app-template names extra controllers <release>-<controller>, e.g. tdarr-node under tdarr/
+                m = re.search(r"^  name: (?:&\w+ )?(\S+)\s*$", content, re.MULTILINE)
+                if m and workload.startswith(m.group(1) + "-"):
+                    return candidate
             except Exception:
                 pass
 
     return None
 
 
-def get_container_resources_block(hr_data: dict, container_name: str) -> tuple[dict, str] | None:
+def get_container_resources_block(hr_data: dict, container_name: str, workload: str | None = None) -> tuple[dict, str] | None:
     spec = hr_data.get("spec", {})
     values = spec.get("values", {})
 
     controllers = values.get("controllers", {})
+    # app-template names a controller <release> when its key equals the release name, otherwise
+    # <release>-<key>; prefer the controller that produced this workload over the first one listed
+    release = str(hr_data.get("metadata", {}).get("name", ""))
+    if workload and len(controllers) > 1:
+        preferred = [
+            n for n in controllers
+            if n == workload or workload == f"{release}-{n}" or workload.endswith(f"-{n}")
+        ]
+        if preferred:
+            controllers = {n: controllers[n] for n in preferred}
     for ctrl_name, ctrl in controllers.items():
         if not isinstance(ctrl, dict):
             continue
@@ -402,7 +432,7 @@ def build_markdown_report(proposals: list[dict], headroom: dict = None) -> str:
     lines.extend([
         "**Safety Guardrails Applied**:",
         "* **Observation Window Gate**: Only workloads with &ge; 8 days of historical telemetry are eligible for automated PRs.",
-        "* **Symmetric Ratchet**: Scale-ups are clamped to a max 2-tier step (or 2x); downgrades are clamped to a max 20% reduction per step.",
+        "* **Symmetric Ratchet**: Scale-ups are clamped to a max 2-tier step (or 2x); downgrades move one tier per step and never below the VPA target.",
         "* **Cluster Capacity Gatekeeper**: Validates aggregate resource requests against active node allocatable headroom.",
         "* **No CPU Limits**: Workloads retain full burstability up to node capacity without kernel CFS throttling.",
         "* **Memory Limits Right-Sized**: High overcommit ceilings are brought down to sane multiples (1.5x-2x request) to eliminate node overcommit alerts.",
@@ -490,7 +520,7 @@ def main():
 
         for rec in recs:
             cname = rec.get("containerName", "app")
-            res_tuple = get_container_resources_block(hr_yaml, cname)
+            res_tuple = get_container_resources_block(hr_yaml, cname, workload_name)
             if not res_tuple:
                 continue
 
@@ -516,12 +546,12 @@ def main():
                 clamped_cpu = clamp_scaleup(curr_cpu_m, vpa_cpu_m, CPU_TIERS_M, max_step_tiers=args.max_scaleup_tiers, max_factor=args.max_scaleup_factor, max_initial_val=100.0)
                 sane_rec_cpu_m = round_up_tier(clamped_cpu, CPU_TIERS_M)
             else:
-                clamped_cpu = clamp_downgrade(curr_cpu_m, vpa_cpu_m, args.max_cpu_downgrade_pct)
-                sane_rec_cpu_m = round_up_tier(clamped_cpu, CPU_TIERS_M)
-                if sane_rec_cpu_m > curr_cpu_m and curr_cpu_m > 0:
-                    sane_rec_cpu_m = int(curr_cpu_m)
+                sane_rec_cpu_m = step_down_tier(curr_cpu_m, vpa_cpu_m, CPU_TIERS_M, args.max_cpu_downgrade_pct)
 
-            cpu_trigger = is_significant_cpu_drift(curr_cpu_m, sane_rec_cpu_m)
+            # A step-down is judged on the drift to the VPA target, since the step itself is damped
+            cpu_trigger = sane_rec_cpu_m != curr_cpu_m and is_significant_cpu_drift(
+                curr_cpu_m, vpa_cpu_m if sane_rec_cpu_m < curr_cpu_m else sane_rec_cpu_m
+            )
 
             # 2. Memory Calculation with Symmetric Ratchet
             # Scale-up: clamped to max_scaleup_tiers (default 2) and max_scaleup_factor (default 2.0)
@@ -530,12 +560,7 @@ def main():
                 clamped_mem = clamp_scaleup(curr_mem_mib, vpa_mem_mib, MEMORY_TIERS_MIB, max_step_tiers=args.max_scaleup_tiers, max_factor=args.max_scaleup_factor, max_initial_val=2048.0)
                 sane_rec_mem_mib = round_up_tier(clamped_mem, MEMORY_TIERS_MIB)
             else:
-                clamped_mem = clamp_downgrade(curr_mem_mib, vpa_mem_mib, args.max_mem_downgrade_pct)
-                sane_rec_mem_mib = round_up_tier(clamped_mem, MEMORY_TIERS_MIB)
-                if sane_rec_mem_mib > curr_mem_mib and curr_mem_mib > 0:
-                    sane_rec_mem_mib = int(curr_mem_mib)
-
-            mem_trigger = is_significant_mem_drift(curr_mem_mib, sane_rec_mem_mib)
+                sane_rec_mem_mib = step_down_tier(curr_mem_mib, vpa_mem_mib, MEMORY_TIERS_MIB, args.max_mem_downgrade_pct)
 
             # 3. Memory Limit Right-Sizing
             # Limit = 2x request (or request + 256Mi), rounded to standard tier
@@ -546,10 +571,18 @@ def main():
 
             # Enforce Kubernetes validity: requests.memory must be <= limits.memory
             effective_limit = sane_limit_mem_mib if limit_trigger else curr_limit_mem_mib
+            mem_capped = False
             if effective_limit > 0 and sane_rec_mem_mib > effective_limit:
+                mem_capped = sane_rec_mem_mib > curr_mem_mib
                 sane_rec_mem_mib = int(effective_limit)
             if limit_trigger and sane_limit_mem_mib < sane_rec_mem_mib:
                 sane_limit_mem_mib = sane_rec_mem_mib
+
+            # Evaluated after the limit cap so a capped request is not reported as a change;
+            # a step-down is judged on the drift to the VPA target, since the step itself is damped
+            mem_trigger = sane_rec_mem_mib != curr_mem_mib and is_significant_mem_drift(
+                curr_mem_mib, vpa_mem_mib if sane_rec_mem_mib < curr_mem_mib else sane_rec_mem_mib
+            )
 
             # Action notes
             action_notes = []
@@ -569,6 +602,8 @@ def main():
                     action_notes.append("Damped mem step-down")
             if limit_trigger:
                 action_notes.append("Trim overcommit limit")
+            if mem_capped and not mem_trigger:
+                action_notes.append(f"Mem held at {format_mem_mib(int(effective_limit))} limit (VPA target {format_mem_mib(int(vpa_mem_mib))}); raise limit by hand")
 
             workload_age = workload_history.get((ns, workload_name), 0.0)
             if workload_age == 0.0:
@@ -576,7 +611,7 @@ def main():
                     if k_ns == ns and (workload_name.startswith(k_wl) or k_wl.startswith(workload_name)):
                         workload_age = max(workload_age, k_age)
 
-            if cpu_trigger or mem_trigger or limit_trigger:
+            if cpu_trigger or mem_trigger or limit_trigger or mem_capped:
                 proposals.append({
                     "namespace": ns,
                     "workload": workload_name,
@@ -669,14 +704,19 @@ def main():
             if "limits" not in res or not isinstance(res["limits"], dict):
                 res["limits"] = {}
 
+            touched = False
             if p["cpu_trigger"] or p["curr_cpu"] == "none":
                 res["requests"]["cpu"] = p["new_cpu"]
+                touched = True
             if p["mem_trigger"] or p["curr_mem"] == "none":
                 res["requests"]["memory"] = p["new_mem"]
+                touched = True
             if p["limit_trigger"]:
                 res["limits"]["memory"] = p["new_limit_mem"]
+                touched = True
 
-            files_to_save[p["file"]] = p["hr_yaml"]
+            if touched:
+                files_to_save[p["file"]] = p["hr_yaml"]
 
         print(f"\nWriting updates to {len(files_to_save)} HelmRelease file(s)...")
         for fpath, ydata in files_to_save.items():
