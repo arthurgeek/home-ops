@@ -79,6 +79,9 @@ spec:
               GITSYNC_PERIOD: 24h
               GITSYNC_ROOT: /add-ons
               GITSYNC_LINK: JBOPS
+              # The emptyDir root is owned by root with fsGroup access; git
+              # refuses it as a repository without this.
+              GITSYNC_GIT_CONFIG: safe.directory:/add-ons
               HOME: /tmp
             securityContext:
               allowPrivilegeEscalation: false
