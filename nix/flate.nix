@@ -8,7 +8,7 @@
 }:
 let
   # renovate: datasource=github-releases depName=home-operations/flate
-  version = "0.6.5";
+  version = "0.7.3";
   platforms = {
     x86_64-linux = {
       asset = "linux_amd64";
