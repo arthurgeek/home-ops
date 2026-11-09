@@ -12,19 +12,19 @@ let
   platforms = {
     x86_64-linux = {
       asset = "linux_amd64";
-      hash = "sha256-N+sM2RpnUjQHVDdXQ6phbCY82DZ85ZSr1C7pVeHsAJk=";
+      hash = "sha256-BdPHlEdkfpUymqRccDXn66w6EglCly54gZ3q3Dvwr+s=";
     };
     aarch64-linux = {
       asset = "linux_arm64";
-      hash = "sha256-f1FIFIkN9KCViHlDrmBr4aivh4YGt70Fde/nVALNONw=";
+      hash = "sha256-NFuLZ53kOTQwAwl7eaq+x9BwwF5w7spcQTGTupeqNo8=";
     };
     x86_64-darwin = {
       asset = "darwin_amd64";
-      hash = "sha256-Sx3O+0YTtMAvM3TI/I1AgtQtiT9DA9qhbiTjfVi8y3g=";
+      hash = "sha256-/GO6k9SUP1go5yQRlhPRzje1KJc4eqlY9dJj8pG7Xbk=";
     };
     aarch64-darwin = {
       asset = "darwin_arm64";
-      hash = "sha256-didL5e+LAW6A6gq/e29hKtx2qJ92E9Ln9+NVCvW54YY=";
+      hash = "sha256-+0rKZQtV+wINrAOXdZde86t1OkWCvdA03IrVxzrUd1U=";
     };
   };
   platform =
